@@ -296,12 +296,10 @@ md"""
 Ahora vamos a medir cómo de rápido es el algoritmo. Para ello vamos a probar los tiempos con distinto número máximo de evaluaciones (_maxevals_) y ver cómo funciona.
 """
 
-# ╔═╡ da6a4978-3e63-4340-bec0-0b4ef91b2dc6
-# Recorro desde 1000 hasta 50000
-evals_time = collect(1000:1000:50000)
-
 # ╔═╡ a0fe8446-788a-45d9-9a79-8417eba14755
 begin
+	# Recorro desde 1000 hasta 50000
+	evals_time = collect(1_000:10_000:50_000)
 	local time_alg = Float64[]
 
 	for evals in evals_time
@@ -1332,8 +1330,7 @@ version = "1.4.1+0"
 # ╟─8fb74b55-4a82-4eb7-bdcf-d63fa4cf3be4
 # ╠═9496e22b-913c-4d77-ba36-c3f2ada64a71
 # ╠═00984827-fc5a-42b5-8073-5d6d7e3e4d54
-# ╠═d43f52c0-2b49-49f5-8f5f-139963384599
-# ╠═da6a4978-3e63-4340-bec0-0b4ef91b2dc6
+# ╟─d43f52c0-2b49-49f5-8f5f-139963384599
 # ╠═a0fe8446-788a-45d9-9a79-8417eba14755
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
