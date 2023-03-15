@@ -179,7 +179,7 @@ begin
 		if ismissing(fit_sol)
 			title = "Solution to $(description(fname))"
 		else
-			title = "Fitness: $fit_sol"
+			title = "Fitness: $(round(fit_sol, digits=2))"
 		end
 		plt = plot_TSP(positions, Dict(:markersize=>3, :color=>:black, :title=>title))
 		for i in 1:(length(sol)-1)
@@ -205,7 +205,7 @@ Para ello, definiremos una función que reciba las distancias y la solución, y 
 
 # ╔═╡ f6d62ede-1e5e-41e1-9981-909f070d63fb
 function fitness(distances, sol)
-	total = 0
+	total = 0.0
 	tam = length(sol)
 
 	for i in 1:(tam-1)
@@ -215,6 +215,9 @@ function fitness(distances, sol)
 	return total
 end
 
+# ╔═╡ 9aa54296-488d-4808-b457-a64ab8fd566c
+md"Lo probamos:"
+
 # ╔═╡ 2be1750b-85d5-4b98-a4f0-4148285cb058
 fitness(Distances_cities, sol)
 
@@ -223,6 +226,91 @@ md"Ahora vamos a añadirlo a la visualización:"
 
 # ╔═╡ 1792f776-9916-402f-9de3-5716ed6744e9
 plot_sol(Position_cities, sol, fitness(Distances_cities, sol))
+
+# ╔═╡ ec6be0aa-e367-49cf-a3d4-cfc1e69602e0
+md"""
+## Generando soluciones de forma aleatoria
+
+Como valor de referencia vamos primero a intentar obtener la solución generando soluciones de forma totalmente aleatoria, y luego compararemos con el resto de algoritmos.
+"""
+
+# ╔═╡ 87f6103e-be1f-404b-ab36-7ae68231ebed
+md"El primer paso es indicar el número de evaluaciones (_maxevals_) que queremos: $(@bind maxevals NumberField(100:50000, default=1000))"
+
+# ╔═╡ efdb8e91-8c36-4990-a18a-be37572de341
+md"El código para generar _maxevals_ soluciones aleatorias es el siguiente"
+
+# ╔═╡ 498c1ce3-ef85-4472-b568-d7f95710c1f5
+md"En donde *inicia_sol* se crea de forma totalmente aleatoria"
+
+# ╔═╡ b810106c-6b18-4670-94e9-976cf56c2ab5
+function inicia_sol(n)
+	return shuffle(1:n)
+end
+
+# ╔═╡ 55c3e565-c98d-4235-a503-2a3fc6f2ef9a
+function optim_random(distancias, maxevals)
+	n = size(distancias, 1)
+	best = inicia_sol(n)
+	best_fit = fitness(distancias, best)
+	evals = 1
+
+	while evals < maxevals
+		newsol = inicia_sol(n)
+		fit_new = fitness(distancias, newsol)
+
+		if fit_new < best_fit
+			best = newsol
+			best_fit = fit_new
+		end
+		evals += 1
+	end
+
+	return best, best_fit
+end
+
+# ╔═╡ a0ea972b-1cbf-4f52-a6cc-20f0a66700b2
+md"Vamos a probarlo"
+
+# ╔═╡ 8fb74b55-4a82-4eb7-bdcf-d63fa4cf3be4
+begin
+	best_random, fit_random = optim_random(Distances_cities, maxevals)
+	md"La mejor solución con pruebas aleatorias da $(round(fit_random, digits=2)) y visualmente es:"
+end
+
+# ╔═╡ 9496e22b-913c-4d77-ba36-c3f2ada64a71
+plot_sol(Distances_cities, best_random, fit_random)
+
+# ╔═╡ 00984827-fc5a-42b5-8073-5d6d7e3e4d54
+md"""
+!!! note
+	¿Cómo os parece? ¿Razonable?
+
+	Prueba a ajustar el número de evaluaciones y ver cómo cambia el fitness.
+"""
+
+# ╔═╡ d43f52c0-2b49-49f5-8f5f-139963384599
+md"""
+## Midiendo el rendimiento y la convergencia
+
+Ahora vamos a medir cómo de rápido es el algoritmo. Para ello vamos a probar los tiempos con distinto número máximo de evaluaciones (_maxevals_) y ver cómo funciona.
+"""
+
+# ╔═╡ da6a4978-3e63-4340-bec0-0b4ef91b2dc6
+# Recorro desde 1000 hasta 50000
+evals_time = collect(1000:1000:50000)
+
+# ╔═╡ a0fe8446-788a-45d9-9a79-8417eba14755
+begin
+	local time_alg = Float64[]
+
+	for evals in evals_time
+		time = @elapsed optim_random(Distances_cities, evals)
+		push!(time_alg, time)
+	end
+
+	plot(evals_time, time_alg, legend=false, title="Tiempo con Búsqueda Aleatoria", xlabel="Evaluaciones", ylabel="Tiempo")
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1230,8 +1318,22 @@ version = "1.4.1+0"
 # ╟─66183a3b-11e7-4c92-8784-714b5d22738e
 # ╟─0daabc72-3ef2-488d-8f6e-aefd2cae841d
 # ╠═f6d62ede-1e5e-41e1-9981-909f070d63fb
+# ╟─9aa54296-488d-4808-b457-a64ab8fd566c
 # ╠═2be1750b-85d5-4b98-a4f0-4148285cb058
 # ╟─668baf12-9a75-4ec6-903e-236ab69066a5
-# ╠═1792f776-9916-402f-9de3-5716ed6744e9
+# ╟─1792f776-9916-402f-9de3-5716ed6744e9
+# ╟─ec6be0aa-e367-49cf-a3d4-cfc1e69602e0
+# ╟─87f6103e-be1f-404b-ab36-7ae68231ebed
+# ╟─efdb8e91-8c36-4990-a18a-be37572de341
+# ╠═55c3e565-c98d-4235-a503-2a3fc6f2ef9a
+# ╟─498c1ce3-ef85-4472-b568-d7f95710c1f5
+# ╠═b810106c-6b18-4670-94e9-976cf56c2ab5
+# ╟─a0ea972b-1cbf-4f52-a6cc-20f0a66700b2
+# ╟─8fb74b55-4a82-4eb7-bdcf-d63fa4cf3be4
+# ╠═9496e22b-913c-4d77-ba36-c3f2ada64a71
+# ╠═00984827-fc5a-42b5-8073-5d6d7e3e4d54
+# ╠═d43f52c0-2b49-49f5-8f5f-139963384599
+# ╠═da6a4978-3e63-4340-bec0-0b4ef91b2dc6
+# ╠═a0fe8446-788a-45d9-9a79-8417eba14755
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
