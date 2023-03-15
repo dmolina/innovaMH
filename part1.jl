@@ -46,6 +46,25 @@ md"""
 En este sistema interactivo se mostrará cómo se puede aplicar un problema concreto, el _Viajante de Comercio_ para resolverlo con distintas metaheurísticas, algo semejante a lo que tienen que hacer los y las estudiantes de la asignatura, pero con problemas distintos. Al igual que las prácticas de la asignatura, este entorno web está dividido en tres partes, cada una de ellas abordando distintas metaheurísticas sobre el mismo problema.
 """
 
+# ╔═╡ 4b016a19-3e60-429c-a52b-9a7415bbb808
+md"""
+## Instrucciones
+
+Este documento está en formato [Pluto](https://plutojl.org/) para ofrecer un entorno reactivo, lo cual quiere decir que se pueden pulsar botones o cambiar valores usando elementos visuales (como Select, sliders, ...) y el sistema se
+actualiza.
+
+El código fuente disponible está en el lenguaje de programación [Julia](https://julialang.org/), que es muy similar a Python. Lo he escogido porque es muy legible, similar al seudocódigo pero al mismo tiempo es ejecutable. Se puede seleccionar *Edit in binder* y se podrá editar en una copia local.
+
+!!! warning
+
+	Aunque Julia es muy similar a Python hay algunas diferencias, comentaré las más notables: 
+    - Los vectores se acceden desde la posición 1 hasta tam, en vez de desde la posición 0 hasta tam-1 (siendo tam el  tamaño del vector). 
+    - Los rangos se ponen como 1:N, ambos incluídos, y no range(1, N+1) como en Python.
+    - Julia ya tiene soporte para vectores y matrices, no es necesario usar una librería como _numpy_ en Python.
+
+	Hay recursos _online_ para ver ciertas [diferencias entre Python y Julia](https://towardsdatascience.com/moving-code-from-python-to-julia-beware-of-false-friends-160573a5d552), pero no es necesario profundizar para entender los algoritmos y "_jugar_", si se quiere, con el código. 
+"""
+
 # ╔═╡ d09d69b4-16b6-4bc4-ac73-209d4599fcce
 md"""
 ## El problema del Viajante de Comercio
@@ -224,7 +243,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.0"
 manifest_format = "2.0"
-project_hash = "5f93983c8077a327dc98a0973982fe6c5d1c2707"
+project_hash = "3061a7da36bd699efea52b52bea6fa2540f73bf9"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -1191,11 +1210,12 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─5ccf83de-10cd-46e0-b940-664b67831e48
+# ╠═5ccf83de-10cd-46e0-b940-664b67831e48
 # ╟─0e1d1860-943a-4808-834f-833e15bc0396
 # ╟─f78d4556-c30e-11ed-3cc3-ffa49c1c0da9
 # ╟─63967850-2682-4d70-89cf-76d91d5da628
 # ╟─8ff8d174-7651-493a-94ba-c613fd7ff69b
+# ╟─4b016a19-3e60-429c-a52b-9a7415bbb808
 # ╟─d09d69b4-16b6-4bc4-ac73-209d4599fcce
 # ╟─13528697-092b-43f8-b6e3-12e4cbc12559
 # ╟─37c8cf4b-eed8-428f-b181-36727af9d472
