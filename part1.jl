@@ -61,6 +61,7 @@ El código fuente disponible está en el lenguaje de programación [Julia](https
     - Los vectores se acceden desde la posición 1 hasta tam, en vez de desde la posición 0 hasta tam-1 (siendo tam el  tamaño del vector). 
     - Los rangos se ponen como 1:N, ambos incluídos, y no range(1, N+1) como en Python.
     - Julia ya tiene soporte para vectores y matrices, no es necesario usar una librería como _numpy_ en Python.
+	- Dentro de una cadena se puede usar $ para mostrar los valores de una variable (similar al fmt de Python).
 
 	Hay recursos _online_ para ver ciertas [diferencias entre Python y Julia](https://towardsdatascience.com/moving-code-from-python-to-julia-beware-of-false-friends-160573a5d552), pero no es necesario profundizar para entender los algoritmos y "_jugar_", si se quiere, con el código. 
 """
@@ -1210,7 +1211,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═5ccf83de-10cd-46e0-b940-664b67831e48
+# ╟─5ccf83de-10cd-46e0-b940-664b67831e48
 # ╟─0e1d1860-943a-4808-834f-833e15bc0396
 # ╟─f78d4556-c30e-11ed-3cc3-ffa49c1c0da9
 # ╟─63967850-2682-4d70-89cf-76d91d5da628
