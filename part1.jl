@@ -78,6 +78,11 @@ El problema del Viajante de Comercio (_Travelman Salesman Problem_, TSP) es un p
 - Encontrar la ruta más corta entre todas las ciudades.
 - Pasar por cada ciudad únicamente una vez.
 - Volver a la ciudad origen.
+
+El objetivo es encontrar la asignación $S$ que minimiza:
+```math
+\displaystyle \sum_{i=0}^{N-1}Distancia({S_i,S_{i+1}}) + Distancia({S_N,S_0})
+```
 """,PlutoUI.LocalResource("TSP.jpg"))
 
 # ╔═╡ 13528697-092b-43f8-b6e3-12e4cbc12559
@@ -273,9 +278,6 @@ end
 # ╔═╡ a0ea972b-1cbf-4f52-a6cc-20f0a66700b2
 md"Vamos a probarlo"
 
-# ╔═╡ ff9a53e6-390a-4651-8baa-621741910a21
-Distances_cities
-
 # ╔═╡ 8fb74b55-4a82-4eb7-bdcf-d63fa4cf3be4
 begin
 	best_random, fit_random = optim_random(Distances_cities, maxevals)
@@ -283,7 +285,7 @@ begin
 end
 
 # ╔═╡ 9496e22b-913c-4d77-ba36-c3f2ada64a71
-plot_sol(Distances_cities, best_random, fit_random)
+plot_sol(Position_cities, best_random, fit_random)
 
 # ╔═╡ 00984827-fc5a-42b5-8073-5d6d7e3e4d54
 md"""
@@ -302,7 +304,7 @@ Usa el _slider_ para adaptar la evaluación.
 
 # ╔═╡ b21b5893-36c8-4b30-aaa0-4570a200874f
 begin
-	slider = @bind evals_dynamic Slider(1:100_000, default=1)
+	slider = @bind evals_dynamic Slider(1:10_000, default=1)
 	nothing
 end
 
@@ -311,11 +313,8 @@ begin
 	local sol, fit
 	seed!(169)
 	sol, fit = optim_random(Distances_cities, evals_dynamic)
-	TwoColumnWideRight(slider, plot_sol(Distances_cities, sol, fit))
+	TwoColumnWideRight(slider, plot_sol(Position_cities, sol, fit))
 end
-
-# ╔═╡ 923d6558-b046-41bd-9a95-11dbbebe5fae
-
 
 # ╔═╡ d43f52c0-2b49-49f5-8f5f-139963384599
 md"""
@@ -327,7 +326,7 @@ Ahora vamos a medir cómo de rápido es el algoritmo. Para ello vamos a probar l
 # ╔═╡ a0fe8446-788a-45d9-9a79-8417eba14755
 begin
 	# Recorro desde 1000 hasta 50000
-	evals_time = collect(1_000:1_000:50_000)
+	evals_time = collect(1_000:1000:50_000)
 	local time_alg = Float64[]
 
 	for evals in evals_time
@@ -464,15 +463,39 @@ begin
 	anim = @animate for i ∈ 1:N
     plot_greedy(Position_cities, Distances_cities, sol_greedy, i)
 	end
-	gif(anim, "greedy.gif", fps = 1)
+	gif(anim, "greedy.gif", fps = 2)
 end
 
 # ╔═╡ 4b6b92d3-a611-49c3-880c-f46fba0cecea
 md"""
-## Búsqueda Local
+## Algoritmo de Búsqueda Local
 
 En este caso vamos a aplicar el modelo de Búsqueda Local visto en clase, en particular el enfoque primero mejor.
+
+Primero vamos a crear una solución aleatoria, y luego aplicamos un operador que cambie la solución un poco, la comparamos y nos quedamos la mejor de ambas, y luego se vuelve a aplicar lo mismo, hasta alcanzar un número de soluciones.
 """
+
+# ╔═╡ f379ac50-dd36-40ed-b76d-2e5786f2ebc8
+md"Definimos la función que muta:"
+
+# ╔═╡ e2df8887-5ba4-430c-aad7-5243c2f137ed
+function muta(solution)
+	result = copy(solution)
+	N = length(solution)
+	posi1 = Random(1:N)
+	posi2 = rand(1:N)
+
+	while posi2 != posi1
+		posi2 = rand(1:N)
+	end
+
+	result[posi1] = solution[posi2]
+	result[posi2] = solution[posi1]
+	return result
+end
+
+# ╔═╡ b8f04454-777c-453e-9afa-4e28967c9bb7
+md"Ahora definimos el random. Para estudiar la convergencia vamos a guardar directamente las soluciones generadas."
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -496,7 +519,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.0"
 manifest_format = "2.0"
-project_hash = "74c78e9223d9742902d638007757448abf43dc20"
+project_hash = "b1387db0dde76b8a2206007cdc4b15c8f30cf4aa"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -1509,7 +1532,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─5ccf83de-10cd-46e0-b940-664b67831e48
+# ╠═5ccf83de-10cd-46e0-b940-664b67831e48
 # ╟─0e1d1860-943a-4808-834f-833e15bc0396
 # ╟─f78d4556-c30e-11ed-3cc3-ffa49c1c0da9
 # ╟─63967850-2682-4d70-89cf-76d91d5da628
@@ -1539,14 +1562,12 @@ version = "1.4.1+0"
 # ╟─498c1ce3-ef85-4472-b568-d7f95710c1f5
 # ╟─b810106c-6b18-4670-94e9-976cf56c2ab5
 # ╟─a0ea972b-1cbf-4f52-a6cc-20f0a66700b2
-# ╟─ff9a53e6-390a-4651-8baa-621741910a21
 # ╟─8fb74b55-4a82-4eb7-bdcf-d63fa4cf3be4
-# ╠═9496e22b-913c-4d77-ba36-c3f2ada64a71
+# ╟─9496e22b-913c-4d77-ba36-c3f2ada64a71
 # ╟─00984827-fc5a-42b5-8073-5d6d7e3e4d54
 # ╟─5bc1c907-f644-4070-9d69-cb27c7864a84
 # ╠═b21b5893-36c8-4b30-aaa0-4570a200874f
 # ╠═8b7885ec-c853-432a-89c5-7221ba5eda03
-# ╠═923d6558-b046-41bd-9a95-11dbbebe5fae
 # ╟─d43f52c0-2b49-49f5-8f5f-139963384599
 # ╠═a0fe8446-788a-45d9-9a79-8417eba14755
 # ╟─da349ffa-0e14-470e-9841-8c385b23440c
@@ -1559,7 +1580,10 @@ version = "1.4.1+0"
 # ╠═9d9882ef-aab5-412e-837d-cc3decf51f7f
 # ╠═dee04e5c-41f5-437d-b2e6-bb3c125cbc40
 # ╟─8ee7b911-30de-4d5c-9752-49fa88b63e7f
-# ╠═e1c68742-621f-48a4-86e6-eda7d2989ae4
-# ╠═4b6b92d3-a611-49c3-880c-f46fba0cecea
+# ╟─e1c68742-621f-48a4-86e6-eda7d2989ae4
+# ╟─4b6b92d3-a611-49c3-880c-f46fba0cecea
+# ╟─f379ac50-dd36-40ed-b76d-2e5786f2ebc8
+# ╠═e2df8887-5ba4-430c-aad7-5243c2f137ed
+# ╟─b8f04454-777c-453e-9afa-4e28967c9bb7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
