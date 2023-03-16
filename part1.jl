@@ -19,7 +19,9 @@ begin
 	using PlutoUI
 	import Distances
 	using Plots
-	using Random: shuffle
+	using Random: shuffle, seed!
+	using PlutoTeachingTools
+	# set_language!(PlutoTeachingTools.SpanishSpain())
 	PlutoUI.TableOfContents(title="📚 Índice", indent=true)
 end
 
@@ -67,6 +69,7 @@ El código fuente disponible está en el lenguaje de programación [Julia](https
 """
 
 # ╔═╡ d09d69b4-16b6-4bc4-ac73-209d4599fcce
+TwoColumnWideLeft(
 md"""
 ## El problema del Viajante de Comercio
 
@@ -75,9 +78,7 @@ El problema del Viajante de Comercio (_Travelman Salesman Problem_, TSP) es un p
 - Encontrar la ruta más corta entre todas las ciudades.
 - Pasar por cada ciudad únicamente una vez.
 - Volver a la ciudad origen.
-
-$(PlutoUI.LocalResource(\"TSP.jpg\"))
-"""
+""",PlutoUI.LocalResource("TSP.jpg"))
 
 # ╔═╡ 13528697-092b-43f8-b6e3-12e4cbc12559
 begin
@@ -98,7 +99,7 @@ begin
 Para abordar el problema usaremos un conjunto de ciudades de TSP sacadas del [TSPlib](http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/)
 
 Escoge un problema: 
-$(@bind fname Select([name => description(name) for name in fnames]))
+$(@bind fname Select([name => description(name) for name in fnames], default=fnames[end]))
 """
 end
 
@@ -227,6 +228,9 @@ md"Ahora vamos a añadirlo a la visualización:"
 # ╔═╡ 1792f776-9916-402f-9de3-5716ed6744e9
 plot_sol(Position_cities, sol, fitness(Distances_cities, sol))
 
+# ╔═╡ 572e6071-34e0-4cde-800c-d09126270c2c
+Distances_cities
+
 # ╔═╡ ec6be0aa-e367-49cf-a3d4-cfc1e69602e0
 md"""
 ## Generando soluciones de forma aleatoria
@@ -272,6 +276,9 @@ end
 # ╔═╡ a0ea972b-1cbf-4f52-a6cc-20f0a66700b2
 md"Vamos a probarlo"
 
+# ╔═╡ ff9a53e6-390a-4651-8baa-621741910a21
+Distances_cities
+
 # ╔═╡ 8fb74b55-4a82-4eb7-bdcf-d63fa4cf3be4
 begin
 	best_random, fit_random = optim_random(Distances_cities, maxevals)
@@ -289,9 +296,33 @@ md"""
 	Prueba a ajustar el número de evaluaciones y ver cómo cambia el fitness.
 """
 
+# ╔═╡ 5bc1c907-f644-4070-9d69-cb27c7864a84
+md"""
+#### Vamos a ver cómo evoluciona de forma más interactiva.
+
+Usa el _slider_ para adaptar la evaluación.
+"""
+
+# ╔═╡ b21b5893-36c8-4b30-aaa0-4570a200874f
+begin
+	slider = @bind evals_dynamic Slider(1:100_000, default=1)
+	nothing
+end
+
+# ╔═╡ 8b7885ec-c853-432a-89c5-7221ba5eda03
+begin
+	local sol, fit
+	seed!(169)
+	sol, fit = optim_random(Distances_cities, evals_dynamic)
+	TwoColumnWideRight(slider, plot_sol(Distances_cities, sol, fit))
+end
+
+# ╔═╡ 923d6558-b046-41bd-9a95-11dbbebe5fae
+
+
 # ╔═╡ d43f52c0-2b49-49f5-8f5f-139963384599
 md"""
-## Midiendo el rendimiento y la convergencia
+### Midiendo el rendimiento
 
 Ahora vamos a medir cómo de rápido es el algoritmo. Para ello vamos a probar los tiempos con distinto número máximo de evaluaciones (_maxevals_) y ver cómo funciona.
 """
@@ -299,7 +330,7 @@ Ahora vamos a medir cómo de rápido es el algoritmo. Para ello vamos a probar l
 # ╔═╡ a0fe8446-788a-45d9-9a79-8417eba14755
 begin
 	# Recorro desde 1000 hasta 50000
-	evals_time = collect(1_000:10_000:50_000)
+	evals_time = collect(1_000:1_000:50_000)
 	local time_alg = Float64[]
 
 	for evals in evals_time
@@ -310,17 +341,80 @@ begin
 	plot(evals_time, time_alg, legend=false, title="Tiempo con Búsqueda Aleatoria", xlabel="Evaluaciones", ylabel="Tiempo")
 end
 
+# ╔═╡ da349ffa-0e14-470e-9841-8c385b23440c
+md"""
+¿Cómo crees que se incrementa el tiempo con las evaluaciones?
+$(@bind como_increm PlutoUI.MultiCheckBox(["Lineal", "Exponencial"]))
+""" |> question_box
+
+# ╔═╡ 2442ec93-4707-42ab-81cb-5d2d68e1643f
+if como_increm == ["Lineal"]
+	PlutoTeachingTools.correct()
+elseif !isempty(como_increm)
+	keep_working()
+end
+
+# ╔═╡ 4488cb35-342e-418d-93b1-31359baa46e7
+md"""
+### Analizando la convergencia
+
+Ahora vamos a analizar la convergencia, para ello vamos a guardar la mejor solución actual.
+"""
+
+# ╔═╡ fcfdcda5-377d-499f-a2bb-77fb72fe03ee
+function optim_random_conv(distancias, maxevals, historic)
+	n = size(distancias, 1)
+	best = inicia_sol(n)
+	best_fit = fitness(distancias, best)
+	push!(historic, best_fit)
+	evals = 1
+
+	while evals < maxevals
+		newsol = inicia_sol(n)
+		fit_new = fitness(distancias, newsol)
+
+		if fit_new < best_fit
+			best = newsol
+			best_fit = fit_new
+		end
+		evals += 1
+		# Only change
+		push!(historic, best_fit)
+	end
+
+	return best, best_fit
+end
+
+# ╔═╡ d086c073-9d82-4bfc-87f1-70631c4be183
+begin
+	local sol, fit, maxevals, historic
+	seed!(169)
+	maxevals = 50_000
+	historic = Float32[]
+	sol, fit = optim_random_conv(Distances_cities, maxevals, historic)
+	plot(1:maxevals, historic, legend=false, title="Gráfica de convergencia", yaxis=:log)
+end
+
+# ╔═╡ 7499f1ae-c9e7-4426-9c47-efa150ef9f78
+Foldable("Comentario", md"""
+!!! note
+
+	Como puedes ver, cada vez mejora menos.
+""")
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
 Distances = "~0.10.8"
 Plots = "~1.38.8"
+PlutoTeachingTools = "~0.2.8"
 PlutoUI = "~0.7.50"
 """
 
@@ -330,7 +424,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.0"
 manifest_format = "2.0"
-project_hash = "3061a7da36bd699efea52b52bea6fa2540f73bf9"
+project_hash = "74c78e9223d9742902d638007757448abf43dc20"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -376,6 +470,12 @@ deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
 git-tree-sha1 = "485193efd2176b88e6622a39a246f8c5b600e74e"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 version = "0.1.6"
+
+[[deps.CodeTracking]]
+deps = ["InteractiveUtils", "UUIDs"]
+git-tree-sha1 = "d57c99cc7e637165c81b30eb268eabe156a45c49"
+uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
+version = "1.2.2"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -447,6 +547,10 @@ deps = ["LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI"]
 git-tree-sha1 = "49eba9ad9f7ead780bfb7ee319f962c811c6d3b2"
 uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 version = "0.10.8"
+
+[[deps.Distributed]]
+deps = ["Random", "Serialization", "Sockets"]
+uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -625,6 +729,12 @@ git-tree-sha1 = "6f2675ef130a300a112286de91973805fcc5ffbc"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
 version = "2.1.91+0"
 
+[[deps.JuliaInterpreter]]
+deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
+git-tree-sha1 = "d9ae7a9081d9b1a3b2a5c1d3dac5e2fdaafbd538"
+uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
+version = "0.9.22"
+
 [[deps.LAME_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "f6250b16881adf048549549fba48b1161acdac8c"
@@ -742,6 +852,12 @@ deps = ["Dates", "Logging"]
 git-tree-sha1 = "cedb76b37bc5a6c702ade66be44f831fa23c681e"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.0.0"
+
+[[deps.LoweredCodeUtils]]
+deps = ["JuliaInterpreter"]
+git-tree-sha1 = "60168780555f3e663c536500aa790b6368adc02a"
+uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
+version = "2.3.0"
 
 [[deps.MIMEs]]
 git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
@@ -887,6 +1003,24 @@ git-tree-sha1 = "f49a45a239e13333b8b936120fe6d793fe58a972"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 version = "1.38.8"
 
+[[deps.PlutoHooks]]
+deps = ["InteractiveUtils", "Markdown", "UUIDs"]
+git-tree-sha1 = "072cdf20c9b0507fdd977d7d246d90030609674b"
+uuid = "0ff47ea0-7a50-410d-8455-4348d5de0774"
+version = "0.0.5"
+
+[[deps.PlutoLinks]]
+deps = ["FileWatching", "InteractiveUtils", "Markdown", "PlutoHooks", "Revise", "UUIDs"]
+git-tree-sha1 = "8f5fa7056e6dcfb23ac5211de38e6c03f6367794"
+uuid = "0ff47ea0-7a50-410d-8455-4348d5de0420"
+version = "0.1.6"
+
+[[deps.PlutoTeachingTools]]
+deps = ["Downloads", "HypertextLiteral", "LaTeXStrings", "Latexify", "Markdown", "PlutoLinks", "PlutoUI", "Random"]
+git-tree-sha1 = "b970826468465da71f839cdacc403e99842c18ea"
+uuid = "661c6b06-c737-4d37-b85c-46df65de6f69"
+version = "0.2.8"
+
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
 git-tree-sha1 = "5bb5129fdd62a2bbbe17c2756932259acf467386"
@@ -945,6 +1079,12 @@ deps = ["UUIDs"]
 git-tree-sha1 = "838a3a4188e2ded87a4f9f184b4b0d78a1e91cb7"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "1.3.0"
+
+[[deps.Revise]]
+deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "Requires", "UUIDs", "Unicode"]
+git-tree-sha1 = "90cb983381a9dc7d3dff5fb2d1ee52cd59877412"
+uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
+version = "3.5.1"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -1320,17 +1460,29 @@ version = "1.4.1+0"
 # ╠═2be1750b-85d5-4b98-a4f0-4148285cb058
 # ╟─668baf12-9a75-4ec6-903e-236ab69066a5
 # ╟─1792f776-9916-402f-9de3-5716ed6744e9
+# ╠═572e6071-34e0-4cde-800c-d09126270c2c
 # ╟─ec6be0aa-e367-49cf-a3d4-cfc1e69602e0
 # ╟─87f6103e-be1f-404b-ab36-7ae68231ebed
 # ╟─efdb8e91-8c36-4990-a18a-be37572de341
-# ╠═55c3e565-c98d-4235-a503-2a3fc6f2ef9a
+# ╟─55c3e565-c98d-4235-a503-2a3fc6f2ef9a
 # ╟─498c1ce3-ef85-4472-b568-d7f95710c1f5
-# ╠═b810106c-6b18-4670-94e9-976cf56c2ab5
+# ╟─b810106c-6b18-4670-94e9-976cf56c2ab5
 # ╟─a0ea972b-1cbf-4f52-a6cc-20f0a66700b2
+# ╟─ff9a53e6-390a-4651-8baa-621741910a21
 # ╟─8fb74b55-4a82-4eb7-bdcf-d63fa4cf3be4
 # ╠═9496e22b-913c-4d77-ba36-c3f2ada64a71
-# ╠═00984827-fc5a-42b5-8073-5d6d7e3e4d54
+# ╟─00984827-fc5a-42b5-8073-5d6d7e3e4d54
+# ╟─5bc1c907-f644-4070-9d69-cb27c7864a84
+# ╠═b21b5893-36c8-4b30-aaa0-4570a200874f
+# ╠═8b7885ec-c853-432a-89c5-7221ba5eda03
+# ╠═923d6558-b046-41bd-9a95-11dbbebe5fae
 # ╟─d43f52c0-2b49-49f5-8f5f-139963384599
 # ╠═a0fe8446-788a-45d9-9a79-8417eba14755
+# ╟─da349ffa-0e14-470e-9841-8c385b23440c
+# ╟─2442ec93-4707-42ab-81cb-5d2d68e1643f
+# ╟─4488cb35-342e-418d-93b1-31359baa46e7
+# ╟─fcfdcda5-377d-499f-a2bb-77fb72fe03ee
+# ╠═d086c073-9d82-4bfc-87f1-70631c4be183
+# ╟─7499f1ae-c9e7-4426-9c47-efa150ef9f78
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
