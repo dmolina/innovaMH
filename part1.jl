@@ -228,9 +228,6 @@ md"Ahora vamos a añadirlo a la visualización:"
 # ╔═╡ 1792f776-9916-402f-9de3-5716ed6744e9
 plot_sol(Position_cities, sol, fitness(Distances_cities, sol))
 
-# ╔═╡ 572e6071-34e0-4cde-800c-d09126270c2c
-Distances_cities
-
 # ╔═╡ ec6be0aa-e367-49cf-a3d4-cfc1e69602e0
 md"""
 ## Generando soluciones de forma aleatoria
@@ -401,6 +398,81 @@ Foldable("Comentario", md"""
 
 	Como puedes ver, cada vez mejora menos.
 """)
+
+# ╔═╡ 3d6186cc-85b5-4539-a7d1-8ee3bf95056c
+md"""
+## Algoritmo Greedy
+
+Vamos a aplicar el algoritmo Greedy, que recuerdo que se basa en ir construyendo una solución paso a paso, escogiendo en cada paso un criterio heurístico para elegir la mejor opción local, que puede no ser la mejor globalmente. 
+
+En este problema es bastante intuitivo, la heurística será coger en cada ciudad la siguiente más cercana. 
+"""
+
+# ╔═╡ 9d9882ef-aab5-412e-837d-cc3decf51f7f
+function greedy(distances)
+	N = size(distances, 1)
+	sol = zeros(Int, N)
+	
+	tam = 1
+	# Primera aleatoria
+	sol[tam] = rand(1:N)
+	last = sol[tam]
+
+	while tam < N
+		# Miro las pendientes
+		to_select = setdiff(1:N, sol)
+		dist = -1
+		mindist = Inf
+		selected = 0
+		
+		for option in to_select
+			dist = distances[sol[tam], option]
+
+			if dist < mindist
+				mindist = dist
+				selected = option
+			end
+		end
+		tam += 1
+		sol[tam] = selected
+	end
+	
+	return sol, fitness(distances, sol)
+end
+
+# ╔═╡ dee04e5c-41f5-437d-b2e6-bb3c125cbc40
+begin
+	sol_greedy, fit_greedy = greedy(Distances_cities)
+	md"El greedy da un fitness de $(fit_greedy), ¿te parece competitivo?"
+end
+
+# ╔═╡ 8ee7b911-30de-4d5c-9752-49fa88b63e7f
+md"Veamos la evolución"
+
+# ╔═╡ e1c68742-621f-48a4-86e6-eda7d2989ae4
+begin
+	function plot_greedy(positions, distances, sol, tope)
+		plt = plot_TSP(positions, Dict(:ms=>3, :color=>:gray))
+
+		for i in 1:(tope-1)
+			ant = sol[i]
+			next = sol[i+1]
+			plot!(plt, positions[1,[ant,next]],positions[2,[ant,next]], color=:black)
+		end
+	end
+	
+	anim = @animate for i ∈ 1:N
+    plot_greedy(Position_cities, Distances_cities, sol_greedy, i)
+	end
+	gif(anim, "greedy.gif", fps = 1)
+end
+
+# ╔═╡ 4b6b92d3-a611-49c3-880c-f46fba0cecea
+md"""
+## Búsqueda Local
+
+En este caso vamos a aplicar el modelo de Búsqueda Local visto en clase, en particular el enfoque primero mejor.
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1460,7 +1532,6 @@ version = "1.4.1+0"
 # ╠═2be1750b-85d5-4b98-a4f0-4148285cb058
 # ╟─668baf12-9a75-4ec6-903e-236ab69066a5
 # ╟─1792f776-9916-402f-9de3-5716ed6744e9
-# ╠═572e6071-34e0-4cde-800c-d09126270c2c
 # ╟─ec6be0aa-e367-49cf-a3d4-cfc1e69602e0
 # ╟─87f6103e-be1f-404b-ab36-7ae68231ebed
 # ╟─efdb8e91-8c36-4990-a18a-be37572de341
@@ -1484,5 +1555,11 @@ version = "1.4.1+0"
 # ╟─fcfdcda5-377d-499f-a2bb-77fb72fe03ee
 # ╠═d086c073-9d82-4bfc-87f1-70631c4be183
 # ╟─7499f1ae-c9e7-4426-9c47-efa150ef9f78
+# ╟─3d6186cc-85b5-4539-a7d1-8ee3bf95056c
+# ╠═9d9882ef-aab5-412e-837d-cc3decf51f7f
+# ╠═dee04e5c-41f5-437d-b2e6-bb3c125cbc40
+# ╟─8ee7b911-30de-4d5c-9752-49fa88b63e7f
+# ╠═e1c68742-621f-48a4-86e6-eda7d2989ae4
+# ╠═4b6b92d3-a611-49c3-880c-f46fba0cecea
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
