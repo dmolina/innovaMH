@@ -105,7 +105,7 @@ begin
 Para abordar el problema usaremos un conjunto de ciudades de TSP sacadas del [TSPlib](http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/)
 
 Escoge un problema: 
-$(@bind fname Select([name => description(name) for name in fnames], default=fnames[end]))
+$(@bind fname Select([name => description(name) for name in fnames], default=fnames[5]))
 """
 end
 
@@ -144,7 +144,7 @@ begin
 end
 
 # ╔═╡ dbb838ef-262a-4db4-8bae-5e8332fba3a6
-md"Vamos a leer sus datos (suponiendo que existe la fución _read_TSP_ que devuelve el tamaño, las posiciones (para pintar visualmente) y las distancias entre ellas (calculadas como las distancias euclídeas a partir de sus posiciones):"
+md"Vamos a leer sus datos (suponiendo que existe la fución **read_TSP** que devuelve el tamaño, las posiciones (para pintar visualmente) y las distancias entre ellas (calculadas como las distancias euclídeas a partir de sus posiciones):"
 
 # ╔═╡ 02fcaf7d-7fe5-48f6-83ba-5387e342892d
 N, Position_cities, Distances_cities = read_TSP(fname);
@@ -543,7 +543,7 @@ md"Vamos a probarlo con un slider"
 
 # ╔═╡ 6628b477-f3f3-451f-81db-cd201a46b17b
 begin
-	slider_ls = @bind evals_ls Slider(1:40_000, default=1)
+	slider_ls = @bind evals_ls Slider(1:50_000, default=1)
 	nothing
 end
 
@@ -575,14 +575,14 @@ show_conv(busquedaLocal, Distances_cities)
 
 # ╔═╡ b662a059-b970-4aa4-9fd2-e5a27f0b047f
 md"""
-## Tabla de tiempos. 
+## Tabla comparativa
 
 Vamos a medir los algoritmos con distintas evaluaciones y medir los tiempos.
 """
 
 # ╔═╡ 64d92285-f7db-4fa2-ab12-d3b247ffd641
 md"""
-$(@bind evals_comp Slider(1:50_000, default=1))
+$(@bind evals_comp Slider(1:100_000, default=1))
 """
 
 # ╔═╡ 46596778-9dbd-426c-a2a7-4014b8b2987c
