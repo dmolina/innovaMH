@@ -21,6 +21,7 @@ begin
 	using Plots
 	using Random: shuffle, seed!
 	using PlutoTeachingTools
+	using DataFrames
 	# set_language!(PlutoTeachingTools.SpanishSpain())
 	PlutoUI.TableOfContents(title="📚 Índice", indent=true)
 end
@@ -313,7 +314,7 @@ begin
 	local sol, fit
 	seed!(169)
 	sol, fit = optim_random(Distances_cities, evals_dynamic)
-	TwoColumnWideRight(slider, plot_sol(Position_cities, sol, fit))
+	TwoColumnWideRight(md"Evaluaciones: $(evals_dynamic) $br $slider", plot_sol(Position_cities, sol, fit))
 end
 
 # ╔═╡ d43f52c0-2b49-49f5-8f5f-139963384599
@@ -479,14 +480,14 @@ Primero vamos a crear una solución aleatoria, y luego aplicamos un operador que
 md"Definimos la función que muta:"
 
 # ╔═╡ e2df8887-5ba4-430c-aad7-5243c2f137ed
-function muta(solution)
+function mutate(solution)
 	result = copy(solution)
 	N = length(solution)
-	posi1 = Random(1:N)
+	posi1 = rand(1:N)
 	posi2 = rand(1:N)
 
 	# Compruebo que sea diferente de la primera
-	while posi2 != posi1
+	while posi2 == posi1
 		posi2 = rand(1:N)
 	end
 
@@ -497,11 +498,137 @@ function muta(solution)
 end
 
 # ╔═╡ b8f04454-777c-453e-9afa-4e28967c9bb7
-md"Ahora definimos el random. Para estudiar la convergencia vamos a guardar directamente las soluciones generadas."
+md"Ahora definimos el método de Búsqueda Local. Para estudiar la convergencia vamos a guardar directamente las soluciones generadas."
+
+# ╔═╡ 3dd5ed16-9e75-4419-8050-7a826b0f8dfa
+function busquedaLocal(dist, maxevals=50_000, historic=nothing)
+	current_sol = inicia_sol(size(dist, 1))
+	current_fit = fitness(dist, current_sol)
+	best_sol = copy(current_sol)
+	best_fit = current_fit
+	evals = 1
+	if !isnothing(historic)
+		push!(historic, (current_fit, best_fit))
+	end
+	
+	while evals < maxevals
+		current_sol = mutate(best_sol)
+		current_fit = fitness(dist, current_sol)
+		evals += 1
+
+		if current_fit < best_fit
+			best_fit = current_fit
+			best_sol = current_sol
+		end
+		
+		if !isnothing(historic)
+			push!(historic, (current_fit, best_fit))
+		end
+	end
+	
+	return best_sol, best_fit
+end
+
+# ╔═╡ ee41d7e7-cc0e-4201-95c8-5a631423ec85
+md"Se puede usar simplemente usando la función **busquedaLocal**"
+
+# ╔═╡ 868f6a4f-1ab4-45eb-beb8-340183faf526
+begin
+	sol_ls, fit_ls = busquedaLocal(Distances_cities)
+	"Fitness: $(fit_ls)"
+end
+
+# ╔═╡ c75a3c0a-8d68-4b20-a20b-914ad237972b
+md"Vamos a probarlo con un slider"
+
+# ╔═╡ 6628b477-f3f3-451f-81db-cd201a46b17b
+begin
+	slider_ls = @bind evals_ls Slider(1:40_000, default=1)
+	nothing
+end
+
+# ╔═╡ 7faa1882-e5dc-4c55-ace5-c0007ed39de1
+begin
+	local sol, fit
+	seed!(169)
+	sol, fit = busquedaLocal(Distances_cities, evals_ls)
+	TwoColumnWideRight(md"Evaluaciones: $evals_ls $br $slider_ls", plot_sol(Position_cities, sol, fit))
+end
+
+# ╔═╡ 2a077552-7ef0-4e53-bfbb-908ebee11d53
+begin
+function show_conv(method, distances)
+	historic = Tuple{Float64,Float64}[]
+	sol, fit = method(distances, evals_ls, historic)
+	plt = plot(1:evals_ls, first.(historic), label="actual", size=(700, 400), xlabel="Evaluaciones", ylabel="Fitness", yscale=:log10)
+	plot!(plt, 1:evals_ls, last.(historic), label="mejor")
+end
+md"""
+### Gráfica de convergencia
+
+Vamos a analizar la gráfica de convergencia, mostrando tanto el fitness de la mejor solución y la solución actual
+"""
+end
+
+# ╔═╡ e7832961-cb91-4dfb-9b2e-e20e617568a6
+show_conv(busquedaLocal, Distances_cities)
+
+# ╔═╡ b662a059-b970-4aa4-9fd2-e5a27f0b047f
+md"""
+## Tabla de tiempos. 
+
+Vamos a medir los algoritmos con distintas evaluaciones y medir los tiempos.
+"""
+
+# ╔═╡ 64d92285-f7db-4fa2-ab12-d3b247ffd641
+md"""
+$(@bind evals_comp Slider(1:50_000, default=1))
+"""
+
+# ╔═╡ 46596778-9dbd-426c-a2a7-4014b8b2987c
+begin
+function times(distances)
+	df = DataFrame(name=String[], tiempos=Float32[], best=Float32[])
+	seed!(169)
+
+	time_greedy = @elapsed _, fit_greedy = greedy(distances)
+	push!(df, (name="Greedy", tiempos=time_greedy, best=fit_greedy))
+	seed!(169)
+	time_random = @elapsed _, fit_random = optim_random(distances, evals_comp)
+	push!(df, (name="Random", tiempos=time_random, best=fit_random))
+	seed!(169)
+	time_BL = @elapsed _, fit_BL = busquedaLocal(distances, evals_comp)
+	push!(df, (name="Búsqueda Local", tiempos=time_BL, best=fit_BL))
+	
+	PrettyTables.pretty_table(HTML, df, header=["Algoritmo", "Tiempo", "Mejor Fit."], title="Resultado con $(evals_comp) evaluaciones", formatters = (PrettyTables.ft_printf("%.3e", [2]),PrettyTables.ft_printf("%2.3f", [3])))
+end
+	times(Distances_cities)
+end
+
+# ╔═╡ 086a03d5-aced-4ed5-a250-21ef3c51caeb
+PlutoTeachingTools.Foldable(
+	"Preguntas", 
+	question_box(md"""
+	¿Qué te parecen los resultados? Indica lo que te parece correcto:
+
+	$(@bind pregunta PlutoUI.MultiCheckBox(["T" => "La búsqueda local mejora a la aleatoria", "F" => "La búsqueda local no mejora a la aleatoria"]))
+	"""
+	)
+)
+
+# ╔═╡ 6c85c8c1-8758-42ee-99a4-bfb81c70a966
+begin
+	if !isempty(pregunta) && ("F" in pregunta || length(pregunta)<1)
+		keep_working()
+	elseif !isempty(pregunta)
+		correct()
+	end
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
@@ -509,6 +636,7 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
+DataFrames = "~1.5.0"
 Distances = "~0.10.8"
 Plots = "~1.38.8"
 PlutoTeachingTools = "~0.2.8"
@@ -521,7 +649,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "b1387db0dde76b8a2206007cdc4b15c8f30cf4aa"
+project_hash = "aefab106372268cc2bf1b0491a5dc8e12523a04a"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -620,16 +748,32 @@ git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.2"
 
+[[deps.Crayons]]
+git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
+uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
+version = "4.1.1"
+
 [[deps.DataAPI]]
 git-tree-sha1 = "e8119c1a33d267e16108be441a287a6981ba1630"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.14.0"
+
+[[deps.DataFrames]]
+deps = ["Compat", "DataAPI", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SnoopPrecompile", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
+git-tree-sha1 = "aa51303df86f8626a962fccb878430cdb0a97eee"
+uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+version = "1.5.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
 git-tree-sha1 = "d1fff3a548102f48987a52a2e0d114fa97d730f0"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 version = "0.18.13"
+
+[[deps.DataValueInterfaces]]
+git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
+uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
+version = "1.0.0"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -711,6 +855,10 @@ git-tree-sha1 = "aa31987c2ba8704e23c6c8ba8a4f769d5d7e4f91"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
 version = "1.0.10+0"
 
+[[deps.Future]]
+deps = ["Random"]
+uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
+
 [[deps.GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Pkg", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll"]
 git-tree-sha1 = "d972031d28c8c8d9d7b41a536ad7bb0c2579caca"
@@ -787,6 +935,12 @@ git-tree-sha1 = "f550e6e32074c939295eb5ea6de31849ac2c9625"
 uuid = "83e8ac13-25f8-5344-8a64-a9f2b223428f"
 version = "0.5.1"
 
+[[deps.InlineStrings]]
+deps = ["Parsers"]
+git-tree-sha1 = "9cc2baf75c6d09f9da536ddf58eb2f29dedaf461"
+uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+version = "1.4.0"
+
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
@@ -797,10 +951,20 @@ git-tree-sha1 = "49510dfcb407e572524ba94aeae2fced1f3feb0f"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
 version = "0.1.8"
 
+[[deps.InvertedIndices]]
+git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
+uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
+version = "1.3.0"
+
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
 version = "0.2.2"
+
+[[deps.IteratorInterfaceExtensions]]
+git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
+uuid = "82899510-4779-5014-852e-03e436cf321d"
+version = "1.0.0"
 
 [[deps.JLFzf]]
 deps = ["Pipe", "REPL", "Random", "fzf_jll"]
@@ -1124,11 +1288,23 @@ git-tree-sha1 = "5bb5129fdd62a2bbbe17c2756932259acf467386"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 version = "0.7.50"
 
+[[deps.PooledArrays]]
+deps = ["DataAPI", "Future"]
+git-tree-sha1 = "a6062fe4063cdafe78f4a0a81cfffb89721b30e7"
+uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
+version = "1.4.2"
+
 [[deps.Preferences]]
 deps = ["TOML"]
 git-tree-sha1 = "47e5f437cc0e7ef2ce8406ce1e7e24d44915f88d"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.3.0"
+
+[[deps.PrettyTables]]
+deps = ["Crayons", "Formatting", "LaTeXStrings", "Markdown", "Reexport", "StringManipulation", "Tables"]
+git-tree-sha1 = "548793c7859e28ef026dba514752275ee871169f"
+uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+version = "2.2.3"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1193,6 +1369,12 @@ git-tree-sha1 = "30449ee12237627992a99d5e30ae63e4d78cd24a"
 uuid = "6c6a2e73-6563-6170-7368-637461726353"
 version = "1.2.0"
 
+[[deps.SentinelArrays]]
+deps = ["Dates", "Random"]
+git-tree-sha1 = "77d3c4726515dca71f6d80fbb5e251088defe305"
+uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
+version = "1.3.18"
+
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
@@ -1248,10 +1430,27 @@ git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.21"
 
+[[deps.StringManipulation]]
+git-tree-sha1 = "46da2434b41f41ac3594ee9816ce5541c6096123"
+uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
+version = "0.3.0"
+
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 version = "1.0.0"
+
+[[deps.TableTraits]]
+deps = ["IteratorInterfaceExtensions"]
+git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
+uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
+version = "1.0.1"
+
+[[deps.Tables]]
+deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "OrderedCollections", "TableTraits", "Test"]
+git-tree-sha1 = "1544b926975372da01227b382066ab70e574a3ec"
+uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
+version = "1.10.1"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
@@ -1534,7 +1733,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─5ccf83de-10cd-46e0-b940-664b67831e48
+# ╠═5ccf83de-10cd-46e0-b940-664b67831e48
 # ╟─0e1d1860-943a-4808-834f-833e15bc0396
 # ╟─f78d4556-c30e-11ed-3cc3-ffa49c1c0da9
 # ╟─63967850-2682-4d70-89cf-76d91d5da628
@@ -1569,7 +1768,7 @@ version = "1.4.1+0"
 # ╟─00984827-fc5a-42b5-8073-5d6d7e3e4d54
 # ╟─5bc1c907-f644-4070-9d69-cb27c7864a84
 # ╠═b21b5893-36c8-4b30-aaa0-4570a200874f
-# ╠═8b7885ec-c853-432a-89c5-7221ba5eda03
+# ╟─8b7885ec-c853-432a-89c5-7221ba5eda03
 # ╟─d43f52c0-2b49-49f5-8f5f-139963384599
 # ╠═a0fe8446-788a-45d9-9a79-8417eba14755
 # ╟─da349ffa-0e14-470e-9841-8c385b23440c
@@ -1587,5 +1786,18 @@ version = "1.4.1+0"
 # ╟─f379ac50-dd36-40ed-b76d-2e5786f2ebc8
 # ╠═e2df8887-5ba4-430c-aad7-5243c2f137ed
 # ╟─b8f04454-777c-453e-9afa-4e28967c9bb7
+# ╠═3dd5ed16-9e75-4419-8050-7a826b0f8dfa
+# ╟─ee41d7e7-cc0e-4201-95c8-5a631423ec85
+# ╟─868f6a4f-1ab4-45eb-beb8-340183faf526
+# ╟─c75a3c0a-8d68-4b20-a20b-914ad237972b
+# ╟─6628b477-f3f3-451f-81db-cd201a46b17b
+# ╟─7faa1882-e5dc-4c55-ace5-c0007ed39de1
+# ╟─2a077552-7ef0-4e53-bfbb-908ebee11d53
+# ╟─e7832961-cb91-4dfb-9b2e-e20e617568a6
+# ╟─b662a059-b970-4aa4-9fd2-e5a27f0b047f
+# ╟─64d92285-f7db-4fa2-ab12-d3b247ffd641
+# ╠═46596778-9dbd-426c-a2a7-4014b8b2987c
+# ╟─086a03d5-aced-4ed5-a250-21ef3c51caeb
+# ╟─6c85c8c1-8758-42ee-99a4-bfb81c70a966
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
