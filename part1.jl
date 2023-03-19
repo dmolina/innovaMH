@@ -83,7 +83,7 @@ El objetivo es encontrar la asignación $S$ que minimiza:
 ```math
 \displaystyle \sum_{i=0}^{N-1}Distancia({S_i,S_{i+1}}) + Distancia({S_N,S_0})
 ```
-""",PlutoUI.LocalResource("TSP.jpg"))
+""",RobustLocalResource("https://images.danimolina.net/TSP.jpg", "TSP.jpg"))
 
 # ╔═╡ 13528697-092b-43f8-b6e3-12e4cbc12559
 begin
@@ -485,10 +485,12 @@ function muta(solution)
 	posi1 = Random(1:N)
 	posi2 = rand(1:N)
 
+	# Compruebo que sea diferente de la primera
 	while posi2 != posi1
 		posi2 = rand(1:N)
 	end
 
+	# Intercambio posiciones
 	result[posi1] = solution[posi2]
 	result[posi2] = solution[posi1]
 	return result
@@ -517,7 +519,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.0"
+julia_version = "1.8.5"
 manifest_format = "2.0"
 project_hash = "b1387db0dde76b8a2206007cdc4b15c8f30cf4aa"
 
@@ -611,7 +613,7 @@ version = "4.6.1"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.5.2+0"
+version = "1.0.1+0"
 
 [[deps.Contour]]
 git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
@@ -1254,7 +1256,7 @@ version = "1.0.0"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.0"
+version = "1.10.1"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1532,7 +1534,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═5ccf83de-10cd-46e0-b940-664b67831e48
+# ╟─5ccf83de-10cd-46e0-b940-664b67831e48
 # ╟─0e1d1860-943a-4808-834f-833e15bc0396
 # ╟─f78d4556-c30e-11ed-3cc3-ffa49c1c0da9
 # ╟─63967850-2682-4d70-89cf-76d91d5da628
