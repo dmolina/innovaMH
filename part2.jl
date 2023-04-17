@@ -353,6 +353,7 @@ begin
 
 		@animate for i in 1:5
 			if i == 1
+				p1 = plot_sol(solution; title="Solución Original")
 				p1
 			elseif i == 2
 				plot_cities!(p1, solution, [pos1, pos2]; color=:red)
@@ -374,7 +375,7 @@ begin
 
 	visual_mutacion
 	anim = plot_mutation(new_solution(N))
-	gif(anim, "anim_mutation.gif", fps = 2)
+	gif(anim, "anim_mutation.gif", fps = 0.5, loop=0, show_msg=false)
 	#PlutoUI.LocalResource("anim_fps15.gif")
 end
 
@@ -433,7 +434,7 @@ begin
 	boton_torneo
 	local vector_fitness = [3, 8, 2, 5, 10, 7, 4]
 	local posi = torneo_binario(vector_fitness, verbose=true)
-	md"Ganador: $posi"
+	@debug "Ganador: $posi"
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -461,7 +462,7 @@ StatsBase = "~0.33.21"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.0"
+julia_version = "1.8.5"
 manifest_format = "2.0"
 project_hash = "d326dee51196d271fd012b3980110491ce33a044"
 
@@ -555,7 +556,7 @@ version = "4.6.1"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.5.2+0"
+version = "1.0.1+0"
 
 [[deps.Contour]]
 git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
@@ -1269,7 +1270,7 @@ version = "1.10.1"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.0"
+version = "1.10.1"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1547,7 +1548,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═3d1cc3c8-dc80-11ed-3163-9d457a2fc8f2
+# ╟─3d1cc3c8-dc80-11ed-3163-9d457a2fc8f2
 # ╟─f8623f68-7151-4416-9ffe-87d704ce0aff
 # ╟─421c26f4-e9fe-4f53-917f-4ade85d96cc7
 # ╟─ab1e47c3-3dab-4982-a7ec-7fdd196f5d24
@@ -1562,7 +1563,7 @@ version = "1.4.1+0"
 # ╠═d098ac9b-526e-47a6-963f-a61b5265e886
 # ╟─acfbad57-b07e-48b4-bb92-ef35350240b7
 # ╠═a647901b-50e1-4430-a85c-2b50c8eae0ff
-# ╠═76bad016-e20e-4491-b7e2-c47b7eec0a20
+# ╟─76bad016-e20e-4491-b7e2-c47b7eec0a20
 # ╟─ac6d750a-658d-4357-b912-4569c61e23ac
 # ╟─f890be4d-60db-4424-99ab-0286ef9b47dd
 # ╠═307784a8-a5f1-4d1c-b228-6c76d26bd863
