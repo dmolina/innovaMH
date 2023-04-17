@@ -253,12 +253,10 @@ end
 
 # ╔═╡ 76bad016-e20e-4491-b7e2-c47b7eec0a20
 begin
-	function plot_sol(sol)
+	function plot_sol(sol; title="")
 		positions = Position_cities
 		fit_sol = fitness(sol)
-		if ismissing(fit_sol)
-			title = "Solution to $(description(fname))"
-		else
+		if isempty(title)
 			title = "Fitness: $(round(fit_sol, digits=2))"
 		end
 		plt = plot_TSP(Dict(:markersize=>3, :color=>:black, :title=>title))
@@ -323,6 +321,61 @@ begin
 	@debug "Original: $solution"
 	@debug "Tras Mutar: $mutated_solution"
 	nothing
+end
+
+# ╔═╡ 5be982d9-0e21-44e7-91e9-34d9ae6b1a2b
+md"Vamos a mostrarlo visualmente $(@bind visual_mutacion Button(\"Mostrar mutación\"))"
+
+# ╔═╡ c940c590-18a4-4885-9cc0-54f5b11d64b9
+begin 
+	function plot_cities!(plot, solution, posi; color=:red)
+		positions = Position_cities
+		scatter!(plot, positions[1,solution[posi]], positions[2,solution[posi]], color=color)
+	end
+	function plot_edge!(plot, solution, posi; color=:red)
+		dim = length(solution)
+		positions = Position_cities
+		newposi = ifelse(posi < dim, posi+1, 1)
+		prevposi = (posi > 1 ? posi - 1 : dim)
+		plot
+		plot!(plot, positions[1, solution[[posi, newposi]]], positions[2, solution[[posi,newposi]]], color=color)
+		plot!(plot, positions[1, solution[[prevposi, posi]]], positions[2, solution[[prevposi,posi]]], color=color)
+	end
+	function plot_mutation(solution)
+		sol = solution
+		dim = length(solution)
+		pos1, pos2 = samplepair(1:dim)
+		newsolution = copy(solution)
+		newsolution[[pos2,pos1]] = solution[[pos1, pos2]]
+		
+		p1 = plot_sol(solution; title="Solución Original")
+		p2 = plot_sol(newsolution; title="Solución Cambiada")
+
+		@animate for i in 1:5
+			if i == 1
+				p1
+			elseif i == 2
+				plot_cities!(p1, solution, [pos1, pos2]; color=:red)
+				p1
+			elseif i == 3
+				plot_edge!(p1, solution, pos1, color=:orange)
+				plot_edge!(p1, solution, pos2, color=:orange)
+				p1
+			elseif i == 4
+				plot_cities!(p2, newsolution, [pos1, pos2]; color=:green)
+				plot_edge!(p2, newsolution, pos1, color=:green)
+				plot_edge!(p2, newsolution, pos2, color=:green)
+				p2
+			else
+				plot_sol(newsolution; title="Solución Final")
+			end
+		end
+	end
+
+	visual_mutacion
+	anim = plot_mutation(new_solution(N))
+	gif(anim, "anim_mutation.gif", fps = 2)
+	#PlutoUI.LocalResource("anim_fps15.gif")
 end
 
 # ╔═╡ f8992c2b-62f5-4a9b-8801-3fb99a8dfc3d
@@ -408,9 +461,9 @@ StatsBase = "~0.33.21"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.5"
+julia_version = "1.8.0"
 manifest_format = "2.0"
-project_hash = "ebdd16aff3d7a5f49fc41b38ffe30db43c118ba2"
+project_hash = "d326dee51196d271fd012b3980110491ce33a044"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -502,7 +555,7 @@ version = "4.6.1"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.1+0"
+version = "0.5.2+0"
 
 [[deps.Contour]]
 git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
@@ -1216,7 +1269,7 @@ version = "1.10.1"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.1"
+version = "1.10.0"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1501,22 +1554,24 @@ version = "1.4.1+0"
 # ╟─ba86256b-134b-4309-88ad-4bf9296c7d42
 # ╟─903c9853-acdc-4495-855d-3d4ce2242bf3
 # ╟─85e41585-b696-42e7-80d5-0c980a30a536
-# ╟─929dbc59-8d47-438c-aa6b-a797cf8cdb73
+# ╠═929dbc59-8d47-438c-aa6b-a797cf8cdb73
 # ╟─04437555-ddb3-49b6-98cc-cf5687af4c08
 # ╟─08bec682-efa6-4bc0-b739-0ddd02f8f0d8
 # ╟─482a3d43-77b0-4f1a-b2ad-c9ded08f0226
 # ╟─bffa1ef7-b779-46ae-9306-3364aaf0e729
 # ╠═d098ac9b-526e-47a6-963f-a61b5265e886
-# ╠═acfbad57-b07e-48b4-bb92-ef35350240b7
+# ╟─acfbad57-b07e-48b4-bb92-ef35350240b7
 # ╠═a647901b-50e1-4430-a85c-2b50c8eae0ff
-# ╟─76bad016-e20e-4491-b7e2-c47b7eec0a20
-# ╠═ac6d750a-658d-4357-b912-4569c61e23ac
+# ╠═76bad016-e20e-4491-b7e2-c47b7eec0a20
+# ╟─ac6d750a-658d-4357-b912-4569c61e23ac
 # ╟─f890be4d-60db-4424-99ab-0286ef9b47dd
 # ╠═307784a8-a5f1-4d1c-b228-6c76d26bd863
 # ╟─cb7e1e27-f497-47cb-9fac-1f96c19c99f3
 # ╠═dfd2a922-c497-47f5-992f-d23ae107683b
 # ╟─170b110d-d1f2-4d3c-a1f7-cf7ac6075a69
 # ╠═40df03c1-78d5-4720-a00a-c0ed749fdc85
+# ╟─5be982d9-0e21-44e7-91e9-34d9ae6b1a2b
+# ╟─c940c590-18a4-4885-9cc0-54f5b11d64b9
 # ╟─f8992c2b-62f5-4a9b-8801-3fb99a8dfc3d
 # ╠═dbe29c8e-0c89-42f3-9e98-c1ea854b1bfc
 # ╟─eacab210-b42e-4606-9e86-a6b882cdba6e
