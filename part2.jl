@@ -23,6 +23,7 @@ begin
 	using PlutoTeachingTools
 	using StatsBase: samplepair
 	using DataFrames
+	using Test
 	using Logging
 	verbose = SimpleLogger(Logging.Debug)
 	muestra_log(a)=with_logger(a,verbose)
@@ -179,6 +180,7 @@ $(RobustLocalResource("https://images.danimolina.net/gga.png", "gga.png"))
 
 - Reemplazo: Las nuevas soluciones, la nueva población, reemplaza a la población anterior. Para evitar perder la mejor solución anterior, se copia en la nueva si no está.
 
+A continuación vamos a ver la implementación.
 """
 
 # ╔═╡ 482a3d43-77b0-4f1a-b2ad-c9ded08f0226
@@ -424,6 +426,38 @@ function torneo_binario(vector_fitness; verbose=false)
 	return result
 end
 
+# ╔═╡ 12a0eb6e-080b-442f-aa7b-67be6a13c2d2
+function AGG(dimension, popsize, pcross, pmut, maxevals=50_000)
+	pop = zeros(Int, popsize, dimension)
+
+	# Inicializo el vector
+	for i in 1:popsize
+		pop[i,begin:end] .= new_solution(dimension)
+	end
+
+	# Creo la nueva población
+	newpop = copy(pop)
+	# Vector de fitness
+	fitness_pop = [fitness(sol) for sol in eachrow(pop)]
+	# Inicio el número de evaluaciones
+	evals = popsize
+	
+	while evals < maxevals
+		# Aplico torneo
+		for i in 1:popsize
+			posi = torneo_binario(fitness_pop)
+			newpop[i,begin:end] .= pop[posi,begin:end]
+		end
+		# Empiezo a cruzar
+		total_cruzar = (popsize*pcross)
+		# TODO
+		evals += 1
+	end
+end
+
+# ╔═╡ ed4e4ad3-20d0-47cb-aaf6-d18bdd3eb5d7
+AGG(N, 50, 0.7, 0.1)
+
 # ╔═╡ eacab210-b42e-4606-9e86-a6b882cdba6e
 md"""
 Ejemplo de uso: $(@bind boton_torneo Button(\"Aplica Torneo\"))
@@ -437,6 +471,134 @@ begin
 	@debug "Ganador: $posi"
 end
 
+# ╔═╡ 2571484f-21ce-45af-bace-4fc4cec62089
+md"""
+## Operador de Cruce
+
+Para este problema vamos a aplicar el operador OX ya que para este problema es el que da mejor problema, como se ve en el trabajo que [compara distintos operadores de cruce](https://arxiv.org/ftp/arxiv/papers/1203/1203.3097.pdf). 
+
+Este operador OX es el _Ordered Crossover_ (operador de orden) que se caracteriza en que más que intentar mantener de las soluciones originales las posiciones de aparición de las ciudades busca mantener el orden entre sí.
+
+$(RobustLocalResource(\"https://creationwiki.org/pool/images/thumb/d/dc/Ox.png/300px-Ox.png\", "OX.png")).
+
+La idea es la siguiente, dadas dos soluciones se intercambia un segmento elegido aleatoriamente, y el resto de ciudades se van copiando (ignorando las existentes) en el mismo orden. 
+"""
+
+# ╔═╡ fa9c4523-c9c0-4ab2-98d1-3e65397e6bd6
+md"""
+Nos faltan algunas funciones por implementar.
+"""
+
+# ╔═╡ 99d32178-8984-403b-8052-e3398b3b8b65
+"""
+	add_rotate(valor, tope)
+
+Permite incrementar el valor, volviendo al primer valor si se supera el límite.
+
+### Parámetros:
+- value: valor a incrementar.
+- tope: valor máximo.
+"""
+function add_rotate(valor, tope)
+	if valor == tope
+		return 1
+	else
+		return valor+1
+	end
+end
+
+# ╔═╡ 8babcf71-6c3a-49d6-bdb1-e2601bb6bf5f
+"""
+	crossover_OX(sol1, sol2)
+
+Aplica el cruce entre las soluciones sol1 y sol2, devolviendo dos nuevas soluciones.
+
+### Parámetros:
+
+- sol1: Primera solución.
+- sol2: Otra solución.
+- verbose: Indica si se desea información.
+
+### Devuelve: un par de soluciones.
+"""
+function crossover_OX(sol1, sol2, verbose=false)
+	dim = length(sol1)
+	# Obtengo un par aleatorio
+	pos1, pos2 = samplepair(dim) 
+
+	# Me aseguro que pos1 sea menor que pos2
+	if pos1 > pos2
+		pos1, pos2 = pos2, pos1
+	end
+
+	if verbose
+		@debug pos1
+		@debug pos2
+	end
+
+	# Creo memoria
+	newsol1 = zero(Int, dim)
+	newsol2 = zero(Int, dim)
+
+	# Intercambio el rango
+	for i ∈ pos1:pos2
+		newsol1[i] = sol2[i]
+		newsol2[i] = sol1[i]
+	end
+
+	# Incrementa la siguiente posición
+	inicio = add_rotate(pos2, dimension)
+	# Relleno el resto de elementos
+	rellena_resto!(sol1, newsol1, inicio)
+	rellena_resto!(sol2, newsol2, inicio)
+	return newsol1, newsol2
+end
+
+# ╔═╡ 9285c1b5-7599-4568-b946-2e39290ef0ff
+md"""
+Vamos a probarlo con unos pocos ejemplos.
+"""
+
+# ╔═╡ de419343-3685-445b-a3de-b94f46008c60
+begin
+	@test add_rotate(1, 4) == 2
+	@test add_rotate(2, 4) == 3
+	@test add_rotate(3, 4) == 4
+	@test add_rotate(4, 4) == 1
+end
+
+# ╔═╡ ddaac93b-0c84-4675-9b29-bab93014283d
+"""
+	rellena_resto(sol, newsol, inicio)
+
+Rellena newsol con los valores de sol desde la posición inicio, ignorando los ya existentes.
+"""
+function rellena_resto(sol, newsol, inicio)
+	dim = length(sol)
+	pos_src = inicio
+	pos_dst = inicio
+	num = count(!iszero, newsol)
+	@assert iszero(newsol[inicio])
+	
+	while num < dim
+		if sol[pos_src] ∉ newsol
+			newsol[pos_dst] = sol[pos_src]
+			pos_dst = add_rotate(pos_dst, dim)
+			num += 1
+		end
+		pos_src = add_rotate(pos_src, dim)
+	end
+	return newsol
+end
+
+# ╔═╡ 4afbe858-3f79-4061-94f5-657e8e36172a
+begin
+	local sol_rellenada = rellena_resto([1, 3, 2, 4], [0, 1, 2, 0], 4)
+	@test all(sol_rellenada .== [3, 1, 2, 4])
+	local sol_dibujo = rellena_resto([7, 5, 3, 1, 9, 8, 6, 4, 2], [0, 0, 0, 8, 5, 7, 3, 0, 0], 8)
+	@test all(sol_dibujo .== [1, 9, 6, 8, 5, 7, 3, 4, 2])
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -448,6 +610,7 @@ PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 DataFrames = "~1.5.0"
@@ -462,9 +625,9 @@ StatsBase = "~0.33.21"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.5"
+julia_version = "1.8.0"
 manifest_format = "2.0"
-project_hash = "d326dee51196d271fd012b3980110491ce33a044"
+project_hash = "1a45cbb623abfb2161baa58b0c22db6a9351bf1c"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -556,7 +719,7 @@ version = "4.6.1"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.1+0"
+version = "0.5.2+0"
 
 [[deps.Contour]]
 git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
@@ -1270,7 +1433,7 @@ version = "1.10.1"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.1"
+version = "1.10.0"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1557,7 +1720,9 @@ version = "1.4.1+0"
 # ╟─85e41585-b696-42e7-80d5-0c980a30a536
 # ╠═929dbc59-8d47-438c-aa6b-a797cf8cdb73
 # ╟─04437555-ddb3-49b6-98cc-cf5687af4c08
-# ╟─08bec682-efa6-4bc0-b739-0ddd02f8f0d8
+# ╠═08bec682-efa6-4bc0-b739-0ddd02f8f0d8
+# ╠═12a0eb6e-080b-442f-aa7b-67be6a13c2d2
+# ╠═ed4e4ad3-20d0-47cb-aaf6-d18bdd3eb5d7
 # ╟─482a3d43-77b0-4f1a-b2ad-c9ded08f0226
 # ╟─bffa1ef7-b779-46ae-9306-3364aaf0e729
 # ╠═d098ac9b-526e-47a6-963f-a61b5265e886
@@ -1577,5 +1742,13 @@ version = "1.4.1+0"
 # ╠═dbe29c8e-0c89-42f3-9e98-c1ea854b1bfc
 # ╟─eacab210-b42e-4606-9e86-a6b882cdba6e
 # ╠═ba092a34-a5f9-47ba-ace4-b83570c5b717
+# ╟─2571484f-21ce-45af-bace-4fc4cec62089
+# ╠═8babcf71-6c3a-49d6-bdb1-e2601bb6bf5f
+# ╟─fa9c4523-c9c0-4ab2-98d1-3e65397e6bd6
+# ╠═99d32178-8984-403b-8052-e3398b3b8b65
+# ╟─9285c1b5-7599-4568-b946-2e39290ef0ff
+# ╠═de419343-3685-445b-a3de-b94f46008c60
+# ╠═ddaac93b-0c84-4675-9b29-bab93014283d
+# ╠═4afbe858-3f79-4061-94f5-657e8e36172a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
