@@ -24,6 +24,8 @@ begin
 	using StatsBase: samplepair
 	using DataFrames
 	using Test
+	using Distributions
+	using Printf
 	using Logging
 	verbose = SimpleLogger(Logging.Debug)
 	muestra_log(a)=with_logger(a,verbose)
@@ -59,6 +61,7 @@ El código fuente disponible está en el lenguaje de programación [Julia](https
     - Los rangos se ponen como 1:N, ambos incluídos, y no range(1, N+1) como en Python.
     - Julia ya tiene soporte para vectores y matrices, no es necesario usar una librería como _numpy_ en Python.
 	- Dentro de una cadena se puede usar $ para mostrar los valores de una variable (similar al fmt de Python).
+	- La instrucción con "." indica que se hace para todos los elementos, por lo que vector1 .= vector2 copia todo el vector, y all(vector1 .== vector2) comprueba que todos los elementos de ambos vectores sean iguales.
 
 	Hay recursos _online_ para ver ciertas [diferencias entre Python y Julia](https://towardsdatascience.com/moving-code-from-python-to-julia-beware-of-false-friends-160573a5d552), pero no es necesario profundizar para entender los algoritmos y "_jugar_", si se quiere, con el código. 
 """
@@ -170,7 +173,7 @@ El esquema se visualiza a continuación:
 
 Mientras no se cumpla el criterio de parada, es decir, mientras no se haya generado un número máximo de evaluaciones, se aplican sucesivamente las siguientes fases:
 
-$(RobustLocalResource("https://images.danimolina.net/gga.png", "gga.png"))
+$(RobustLocalResource("https://images.danimolina.net/agg.png", "agg.png"))
 
 - Selección: Se seleccionan soluciones de la población original para constituir una población de igual tamaño. Se seleccionan de forma aleatoriamente, pero normalmente con mayor tendencia a escoger las que presenten mayor fitness.
 
@@ -181,6 +184,78 @@ $(RobustLocalResource("https://images.danimolina.net/gga.png", "gga.png"))
 - Reemplazo: Las nuevas soluciones, la nueva población, reemplaza a la población anterior. Para evitar perder la mejor solución anterior, se copia en la nueva si no está.
 
 A continuación vamos a ver la implementación.
+"""
+
+# ╔═╡ 6f75ee5e-8b40-42ae-b59f-fc17a2c16800
+md"""
+## Algoritmo Genético Estacionario
+
+El esquema se visualiza a continuación:
+
+Mientras no se cumpla el criterio de parada, es decir, mientras no se haya generado un número máximo de evaluaciones, se aplican sucesivamente las siguientes fases:
+
+$(RobustLocalResource("https://images.danimolina.net/age.png", "age.png"))
+
+- Selección: Se seleccionan dos soluciones de la población original. Se seleccionan de forma aleatoriamente, pero normalmente con mayor tendencia a escoger las que presenten mayor fitness.
+
+- Cruce: Se cruzan el par de soluciones seleccionadas para crear dos nuevas soluciones, reemplazando a las originales.
+
+- Mutación: Con una cierta probabilidad P_mut muy baja, se mutan las nuevas soluciones, mediante un cambio muy pequeño.
+
+- Reemplazo: Las nuevas soluciones, reemplazan a las dos peores si las mejoran, es elitista por naturaleza.
+
+A continuación vamos a ver la implementación.
+"""
+
+# ╔═╡ e07d5db1-fedb-4883-9e7b-42bbeb1196c4
+md"""
+## Experimentos
+"""
+
+# ╔═╡ e8ccadcf-ae4d-4014-a3bc-0d08b1c7fb58
+begin
+md"""
+Vamos a aplicarlo. El Tiempo Real indica que conforme se actualice el control deslizante se ejecuta. Si no se marca se evalúan hasta el máximo de evaluaciones y luego. Es recomendable solo usar el Modo en Tiempo Real en problemas pequeños.
+
+$(@bind ag_number_evals confirm(NumberField(1000:1000:50_000, default=1000)))
+$(@bind online MultiCheckBox([\"Modo Tiempo Real\"]))
+"""
+end
+
+# ╔═╡ 441219bc-c438-4159-ad1e-8441cdd850e9
+@bind boton_seed Button("Inicia Semilla")
+
+# ╔═╡ 4e1cf32a-9387-4b6b-b324-d5ecb14e614d
+begin 
+	boton_seed
+	seed_value = rand(DiscreteUniform(0, 3000))
+	md"""
+Semilla: $(seed_value)
+"""
+end	
+
+# ╔═╡ abb709a1-7344-4e84-a24f-443caed0fc00
+md"""
+Evaluaciones AGG: $(@bind global_evals_agg Slider(50:50:ag_number_evals, show_value=true))
+"""
+
+# ╔═╡ 1ca679ff-faf5-4194-9da3-3f8811bb3049
+md"""
+Evaluaciones AGE: $(@bind global_evals_age Slider(50:50:ag_number_evals, show_value=true))
+"""
+
+# ╔═╡ ddb0cea0-dfd7-40a7-a6c3-8dbb68c042d3
+if isempty(online)
+md"""
+Evaluaciones AGG y AGE: $(@bind global_evals_ag Slider(50:50:ag_number_evals, show_value=true))
+"""
+end
+
+# ╔═╡ 2af35bfb-b24f-4210-a0a1-af4879ced7f9
+md"""
+# AG Generacional Vs AG Estacionario
+
+Vamos a comparar los resultados de ambos para el problema **$(basename(fname))** con **$(ag_number_evals)** evaluaciones.
 """
 
 # ╔═╡ 482a3d43-77b0-4f1a-b2ad-c9ded08f0226
@@ -194,6 +269,11 @@ md"""
 
 Para crear una solución desordenamos un vector de índices.
 """
+
+# ╔═╡ 7d4b2a03-b544-4e7b-a096-a2f97dcaddfa
+function indices_ordenados(vector)
+	return sortperm(vector)
+end
 
 # ╔═╡ d098ac9b-526e-47a6-963f-a61b5265e886
 """
@@ -265,7 +345,7 @@ begin
 		for i in 1:(length(sol)-1)
 			ant = sol[i]
 			next = sol[i+1]
-			plot!(plt, positions[1,[ant,next]], positions[2,[ant,next]], color=:gray, style=:dash, linealpha=0.5)
+			plot!(plt, positions[1,[ant,next]], positions[2,[ant,next]], color=:gray, style=:dash, linealpha=3)
 		end
 		plot!(plt, positions[1,[sol[end],sol[begin]]], positions[2,[sol[end],sol[begin]]], color=:gray, style=:dash, linealpha=0.5)
 		plt
@@ -305,7 +385,7 @@ function mutation(solution; verbose=false)
 	pos1, pos2 = samplepair(1:dim)
 
 	if verbose
-		@debug "Intercambio $pos1 y $pos2"
+		@debug "Intercambio posiciones $pos1 y $pos2"
 	end
 	mutation_sol = copy(solution)
 	mutation_sol[pos2], mutation_sol[pos1] = solution[pos1], solution[pos2]
@@ -412,7 +492,7 @@ function torneo_binario(vector_fitness; verbose=false)
 
 	if verbose
 		@debug "Posiciones: $pos1, $pos2"
-		@debug "Fitness: $(vector_fitness[pos1]) $(vector_fitness[pos2])"
+		@debug "Fitness: $(vector_fitness[pos1]), $(vector_fitness[pos2])"
 	end
 	
 	result = 0
@@ -425,38 +505,6 @@ function torneo_binario(vector_fitness; verbose=false)
 
 	return result
 end
-
-# ╔═╡ 12a0eb6e-080b-442f-aa7b-67be6a13c2d2
-function AGG(dimension, popsize, pcross, pmut, maxevals=50_000)
-	pop = zeros(Int, popsize, dimension)
-
-	# Inicializo el vector
-	for i in 1:popsize
-		pop[i,begin:end] .= new_solution(dimension)
-	end
-
-	# Creo la nueva población
-	newpop = copy(pop)
-	# Vector de fitness
-	fitness_pop = [fitness(sol) for sol in eachrow(pop)]
-	# Inicio el número de evaluaciones
-	evals = popsize
-	
-	while evals < maxevals
-		# Aplico torneo
-		for i in 1:popsize
-			posi = torneo_binario(fitness_pop)
-			newpop[i,begin:end] .= pop[posi,begin:end]
-		end
-		# Empiezo a cruzar
-		total_cruzar = (popsize*pcross)
-		# TODO
-		evals += 1
-	end
-end
-
-# ╔═╡ ed4e4ad3-20d0-47cb-aaf6-d18bdd3eb5d7
-AGG(N, 50, 0.7, 0.1)
 
 # ╔═╡ eacab210-b42e-4606-9e86-a6b882cdba6e
 md"""
@@ -507,6 +555,43 @@ function add_rotate(valor, tope)
 	end
 end
 
+# ╔═╡ 9285c1b5-7599-4568-b946-2e39290ef0ff
+md"""
+Vamos a probarlo con unos pocos ejemplos.
+"""
+
+# ╔═╡ de419343-3685-445b-a3de-b94f46008c60
+begin
+	@test add_rotate(1, 4) == 2
+	@test add_rotate(2, 4) == 3
+	@test add_rotate(3, 4) == 4
+	@test add_rotate(4, 4) == 1
+end
+
+# ╔═╡ ddaac93b-0c84-4675-9b29-bab93014283d
+"""
+	rellena_resto(sol, newsol, inicio)
+
+Rellena newsol con los valores de sol desde la posición inicio, ignorando los ya existentes.
+"""
+function rellena_resto(sol, newsol, inicio)
+	dim = length(sol)
+	pos_src = inicio
+	pos_dst = inicio
+	num = count(!iszero, newsol)
+	# @assert iszero(newsol[inicio])
+	
+	while num < dim
+		if sol[pos_src] ∉ newsol
+			newsol[pos_dst] = sol[pos_src]
+			pos_dst = add_rotate(pos_dst, dim)
+			num += 1
+		end
+		pos_src = add_rotate(pos_src, dim)
+	end
+	return newsol
+end
+
 # ╔═╡ 8babcf71-6c3a-49d6-bdb1-e2601bb6bf5f
 """
 	crossover_OX(sol1, sol2)
@@ -537,8 +622,8 @@ function crossover_OX(sol1, sol2, verbose=false)
 	end
 
 	# Creo memoria
-	newsol1 = zero(Int, dim)
-	newsol2 = zero(Int, dim)
+	newsol1 = zeros(Int, dim)
+	newsol2 = zeros(Int, dim)
 
 	# Intercambio el rango
 	for i ∈ pos1:pos2
@@ -547,48 +632,11 @@ function crossover_OX(sol1, sol2, verbose=false)
 	end
 
 	# Incrementa la siguiente posición
-	inicio = add_rotate(pos2, dimension)
+	inicio = add_rotate(pos2, dim)
 	# Relleno el resto de elementos
-	rellena_resto!(sol1, newsol1, inicio)
-	rellena_resto!(sol2, newsol2, inicio)
+	newsol1 .= rellena_resto(sol1, newsol1, inicio)
+	newsol2 .= rellena_resto(sol2, newsol2, inicio)
 	return newsol1, newsol2
-end
-
-# ╔═╡ 9285c1b5-7599-4568-b946-2e39290ef0ff
-md"""
-Vamos a probarlo con unos pocos ejemplos.
-"""
-
-# ╔═╡ de419343-3685-445b-a3de-b94f46008c60
-begin
-	@test add_rotate(1, 4) == 2
-	@test add_rotate(2, 4) == 3
-	@test add_rotate(3, 4) == 4
-	@test add_rotate(4, 4) == 1
-end
-
-# ╔═╡ ddaac93b-0c84-4675-9b29-bab93014283d
-"""
-	rellena_resto(sol, newsol, inicio)
-
-Rellena newsol con los valores de sol desde la posición inicio, ignorando los ya existentes.
-"""
-function rellena_resto(sol, newsol, inicio)
-	dim = length(sol)
-	pos_src = inicio
-	pos_dst = inicio
-	num = count(!iszero, newsol)
-	@assert iszero(newsol[inicio])
-	
-	while num < dim
-		if sol[pos_src] ∉ newsol
-			newsol[pos_dst] = sol[pos_src]
-			pos_dst = add_rotate(pos_dst, dim)
-			num += 1
-		end
-		pos_src = add_rotate(pos_src, dim)
-	end
-	return newsol
 end
 
 # ╔═╡ 4afbe858-3f79-4061-94f5-657e8e36172a
@@ -599,15 +647,392 @@ begin
 	@test all(sol_dibujo .== [1, 9, 6, 8, 5, 7, 3, 4, 2])
 end
 
+# ╔═╡ a5f2720c-edfb-414a-9bb1-6957b8c6fa81
+begin
+	local sol1 = new_solution(10)
+	local sol2 = new_solution(10)
+	local newsol1, newsol2 = crossover_OX(sol1, sol2)
+	@test all(crossover_OX(sol1, sol1) .== (sol1, sol1))
+end
+
+# ╔═╡ 5f487255-3171-4b50-9e38-fe4146c4115a
+md"""
+## Reemplazo del AG Estacionario
+"""
+
+# ╔═╡ e2b71cc7-e505-4ea1-84dd-6109ec49204c
+"""
+	reemplaza_peores(newsol1, fitness_sol1, newsol2, fitness_sol2, 
+						pop, fitness_pop)
+
+Reemplaza las dos peores soluciones por las nuevas si las mejoran.
+
+### Parámetros:
+
+- newsol1: Primera nueva solución.
+- fitness_sol1: Fitness de newsol1.
+- newsol2: La otra nueva solución.
+- fitness_sol2: Fitness de newsol2.
+- pop: Población actual **(es modificada)**.
+- fitness_pop: Vector de fitness **(es modificada)**.
+"""
+function reemplaza_peores!(newsol1, fitness_sol1, newsol2, fitness_sol2, pop, fitness_pop)
+	posi_ordenados = indices_ordenados(fitness_pop)
+	pos_worst = posi_ordenados[end]
+	pos_second_worst = posi_ordenados[end-1]
+	worst = pop[pos_worst,:]
+	second_worst = pop[pos_second_worst,:]
+	minipop_fit = [fitness_sol1, fitness_sol2, fitness_pop[pos_worst], fitness_pop[pos_second_worst]]
+	minipop = [newsol1, newsol2, worst, second_worst]
+	selected = indices_ordenados(minipop_fit)
+	# Reemplazo los dos peores
+	pop[pos_worst, :] .= minipop[first(selected)] 
+	fitness_pop[pos_worst] = minipop_fit[first(selected)]
+	pop[pos_second_worst, :] .= minipop[selected[2]] 
+	fitness_pop[pos_second_worst] = minipop_fit[selected[2]]
+	nothing
+end
+
+# ╔═╡ a4e30c13-e7a6-406e-b8d2-16758231b7ff
+begin
+	sol1 = [1, 2, 3]
+	sol2 = [2, 3, 4]
+	pop = zeros(Int, 3, 3)
+	fitness_pop = [6, 8, 4]
+	reemplaza_peores!(sol1, 3, sol2, 7, pop, fitness_pop)
+	@test all(sort(fitness_pop) .== [3, 4, 6])
+	pop = zeros(Int, 3, 3)
+	fitness_pop = [6, 8, 4]
+	reemplaza_peores!(sol1, 9, sol2, 10, pop, fitness_pop)
+	@test all(sort(fitness_pop) .== [4, 6, 8])
+end
+
+# ╔═╡ 4e9cd677-60f5-4d0b-b882-7c7666f8d5ff
+md"""
+## Apéndice
+
+Celdas ocultas.
+"""
+
+# ╔═╡ e4c005e3-d1bd-47e3-9f66-105931a45f34
+begin
+	eachsol(pop)=eachrow(pop)
+	indices(pop::AbstractVector{T}) where T=eachindex(pop)
+	indices(matrix::Matrix{T}) where T=1:size(matrix, 1)
+	posicion_aleatoria(pop)=rand(1:size(pop, 1))
+	con_probabilidad(prob)=rand() <= prob
+	pos_mejor(fit)=argmin(fit)
+	pos_peor(fit)=argmax(fit)
+	obten_mejor_fitness(fit)=minimum(fit)
+	nothing
+end
+
+# ╔═╡ 12a0eb6e-080b-442f-aa7b-67be6a13c2d2
+function AGG(dimension, popsize, pcross, pmut; maxevals=50_000, historico=Tuple{Int,AbstractVector{<:Integer},Float64}[], copia_historico=false)
+	pop = zeros(Int, popsize, dimension)
+	# Creo la nueva población
+	newpop = copy(pop)
+	
+	# Inicializo el vector
+	for i in 1:popsize
+		pop[i,:] .= new_solution(dimension)
+	end
+
+	# Vector de fitness
+	fitness_pop = [fitness(sol) for sol in eachsol(pop)]
+	mejor = argmin(fitness_pop)
+	# Inicio el número de evaluaciones
+	evals = popsize
+
+	if copia_historico
+		push!(historico, (evals, pop[argmin(fitness_pop), :], obten_mejor_fitness(fitness_pop)))
+	end
+	
+	while evals < maxevals
+		# Aplico selección por torneo
+		for i in indices(newpop)
+			# Copio el ganador del torneo
+			posi = torneo_binario(fitness_pop)
+			newpop[i, :] .= pop[posi, :]
+		end
+
+		# Empiezo a cruzar de forma consecutiva
+		total_cruzar = (popsize*pcross)
+		i = 1
+
+		while i < total_cruzar
+			sol1 = newpop[i, :]
+			sol2 = newpop[i+1, :]
+			newsol1, newsol2 = crossover_OX(sol1, sol2)
+			newpop[i, :] .= newsol1
+			newpop[i+1, :] .= newsol2
+			i += 2
+		end
+
+		# Mutación
+		total_mutar = popsize ÷ 10
+
+		for i in enumerate(total_mutar)
+			posi = posicion_aleatoria(newpop)
+			newpop[posi, :] .= mutation(newpop[posi, :])
+		end
+		
+		# Evaluación
+		fitness_newpop = [fitness(sol) for sol in eachsol(newpop)]
+		evals += popsize
+
+		# Elitismo, no permito que empeore
+		if fitness_pop[mejor] < obten_mejor_fitness(fitness_newpop)
+			worst = pos_peor(fitness_newpop)
+			newpop[worst, :] .= pop[mejor, :]
+			fitness_newpop[worst] = fitness_pop[mejor]
+		end
+
+		# Reemplazo
+		pop .= newpop
+		fitness_pop .= fitness_newpop
+		mejor = pos_mejor(fitness_pop)
+		
+		if copia_historico
+			push!(historico, (evals, pop[mejor, :], fitness_pop[mejor]))
+		end
+	
+	end
+
+	return pop[mejor, :], fitness_pop[mejor]
+end
+
+# ╔═╡ 73dc306d-3904-4c35-899c-05823e2380f2
+function AGE(dimension, popsize, p_mut; maxevals=50_000, historico=Tuple{Int, AbstractVector{Integer}, Float64}[], copia_historico=false)
+	pop = zeros(Int, popsize, dimension)
+	
+	# Inicializo el vector
+	for i in 1:popsize
+		pop[i, :] .= new_solution(dimension)
+	end
+
+	# Vector de fitness
+	fitness_pop = [fitness(sol) for sol in eachsol(pop)]
+	# Inicio el número de evaluaciones
+	evals = popsize
+
+	if copia_historico
+		push!(historico, (evals, pop[pos_mejor(fitness_pop), :], obten_mejor_fitness(fitness_pop)))
+	end
+	
+	@views while evals < maxevals
+		# Aplico selección por torneo
+		posi1 = torneo_binario(fitness_pop)
+		posi2 = torneo_binario(fitness_pop)
+
+		# Cruco las soluciones aleatorias
+		newsol1, newsol2 = crossover_OX(pop[posi1, :], pop[posi2, :])
+
+		# Mutación
+		if (con_probabilidad(p_mut))
+			newsol1 .= mutation(newsol1)
+		end
+
+		if (con_probabilidad(p_mut))
+			newsol2 .= mutation(newsol2)
+		end
+		
+		# Evaluación
+		fitness_sol1 = fitness(newsol1)
+		fitness_sol2 = fitness(newsol2)
+		evals += 2
+			
+		# Reemplazo las dos peores
+		reemplaza_peores!(newsol1, fitness_sol1, newsol2, fitness_sol2, pop, fitness_pop)
+		
+		if copia_historico
+			push!(historico, (evals, pop[pos_mejor(fitness_pop), :], obten_mejor_fitness(fitness_pop)))
+		end
+	end
+
+	mejor = pos_mejor(fitness_pop)
+	return pop[mejor, :], fitness_pop[mejor]
+end
+
+# ╔═╡ 721acdea-79c6-4409-9e52-06f66ebf67d7
+begin 
+	function AGE_One(dimension, popsize, p_mut; maxevals=50_000, historico=Tuple{Int, AbstractVector{Integer}, Float64}[], copia_historico=false)
+	pop = zeros(Int, popsize, dimension)
+	
+	# Inicializo el vector
+	for i in 1:popsize
+		pop[i, :] .= new_solution(dimension)
+	end
+
+	# Vector de fitness
+	fitness_pop = [fitness(sol) for sol in eachsol(pop)]
+	# Inicio el número de evaluaciones
+	evals = popsize
+	pos_worst = argmax(fitness_pop)
+
+	if copia_historico
+		push!(historico, (evals, pop[argmin(fitness_pop), :], minimum(fitness_pop)))
+	end
+	
+	@views while evals < maxevals
+		# Aplico selección por torneo
+		posi1 = torneo_binario(fitness_pop)
+		posi2 = torneo_binario(fitness_pop)
+
+		# Cruco las soluciones aleatorias
+		newsol1, newsol2 = crossover_OX(pop[posi1, :], pop[posi2, :])
+
+		# Mutación
+		if (rand() <= p_mut)
+			newsol1 .= mutation(newsol1)
+		end
+
+		if (rand() <= p_mut)
+			newsol2 .= mutation(newsol2)
+		end
+		
+		# Evaluación
+		fitness_sol1 = fitness(newsol1)
+		fitness_sol2 = fitness(newsol2)
+		evals += 2
+
+		if fitness_sol1 < fitness_sol2
+			fitness_sol = fitness_sol1
+			sol = newsol1
+		else
+			fitness_sol = fitness_sol2
+			sol = newsol2
+		end
+		# Reemplazo el peor
+		if fitness_sol < fitness_pop[pos_worst]
+			pop[pos_worst, :] .= sol
+			fitness_pop[pos_worst] = fitness_sol
+			pos_worst = argmax(fitness_pop)
+		end
+	
+		if copia_historico
+			push!(historico, (evals, pop[argmin(fitness_pop), :], minimum(fitness_pop)))
+		end
+	end
+
+	mejor = argmin(fitness_pop)
+	return pop[mejor, :], fitness_pop[mejor]
+end
+	nothing
+end
+
+# ╔═╡ a8657d4f-867b-43b3-8e78-8be73f1ff8ea
+begin
+	historico_agg = Tuple{Int,Vector{Int},Float64}[]
+	historico_age = Tuple{Int,Vector{Int},Float64}[]
+	historico_age_one = Tuple{Int,Vector{Int},Float64}[]
+	
+	seed!(seed_value)
+	
+	if isempty(online)
+		time_agg = @elapsed _, _ = AGG(N, 50, 0.7, 0.1; maxevals=ag_number_evals, copia_historico=true, historico=historico_agg)
+		seed!(seed_value)
+		time_age = @elapsed _, _ = AGE(N, 50, 0.1; maxevals=ag_number_evals, copia_historico=true, historico=historico_age)
+		time_age_one = @elapsed _, _ = AGE_One(N, 50, 0.1; maxevals=ag_number_evals, copia_historico=true, historico=historico_age_one)
+	end
+	nothing
+end
+
+# ╔═╡ bce56ce3-fb2e-4d64-bb2b-97f85a00aa94
+begin
+	local sol, fit
+	if !isempty(online)
+		seed!(seed_value)
+		(sol, fit) = AGG(N, 50, 0.7, 0.1; maxevals=global_evals_agg)
+	else
+		encuentra_historico_agg(item)=first(item)>=global_evals_agg
+		local item = findfirst(encuentra_historico_agg, historico_agg)
+		(_, sol, fit) = historico_agg[item]
+	end
+	local evals_gga_str = @sprintf "%.2E" global_evals_agg
+	plot_sol(sol; title="Resultados AGG: $(evals_gga_str) evals, distancia $(round(fit, digits=1))")
+end
+
+# ╔═╡ 05934fbf-e9a3-41e4-a333-18be8eda1275
+begin
+	if !isempty(historico_agg)
+		local x = first.(historico_agg)
+		local y = last.(historico_agg)
+		plot(x, y, legend=false, xlabel="Evaluaciones", ylabel="Fitness", yscale=:log10, title="Gráfica de Convergencia del AG Generacional")
+	end
+end
+
+# ╔═╡ 16a2aa78-c2d0-4fbc-88e4-fb45032aa14e
+begin
+	local sol, fit
+	if !isempty(online)
+		seed!(seed_value)
+		(sol, fit) = AGE(N, 50, 0.1; maxevals=global_evals_age)
+	else
+		encuentra_historico_age(item)=first(item)>=global_evals_age
+		local item = findfirst(encuentra_historico_age, historico_age)
+		local sol, fit
+		(_, sol, fit) = historico_age[item]
+	end
+	local evals_gga_str = @sprintf "%.2E" global_evals_age
+	plot_sol(sol; title="Resultados AGE: $(evals_gga_str) evals, distancia $(round(fit, digits=1))")
+end
+
+# ╔═╡ 3be68ad7-75a1-4a4d-a234-2bd24418b963
+begin
+	if !isempty(historico_age)
+		local x = first.(historico_age)
+		local y = last.(historico_age)
+		plot(x, y, legend=false, xlabel="Evaluaciones", ylabel="Fitness", yscale=:log10, title="Gráfica de Convergencia del AG Estacionario")
+	end
+end
+
+# ╔═╡ e5846c20-63aa-4972-9d00-5839ce9f2128
+begin
+	local sol_agg, sol_age, fit_agg, fit_age
+	local item_age, item_agg
+	if isempty(online)
+
+		encuentra_historico_ag(item)=first(item)>=global_evals_ag
+		item_age = findfirst(encuentra_historico_ag, historico_age)
+		(_, sol_age, fit_age) = historico_age[item_age]
+		item_agg = findfirst(encuentra_historico_ag, historico_agg)
+		(_, sol_agg, fit_agg) = historico_agg[item_agg]
+	local evals_gg_str = @sprintf "%.2E" global_evals_ag
+	p_age = plot_sol(sol_age; title="Resultados AGE: $(evals_gg_str) evals, distancia $(round(fit_age, digits=1))")
+	p_agg = plot_sol(sol_agg; title="Resultados AGG: $(evals_gg_str) evals, distancia $(round(fit_agg, digits=1))")
+	md"""
+	$(p_agg)
+	$(p_age)
+	"""
+	end
+	
+end
+
+# ╔═╡ f512edb8-95ec-485d-9037-81c1062933c1
+begin
+	local best_agg, best_age, best_age_one
+	(_, _, best_agg) = last(historico_agg)
+	(_, _, best_age) = last(historico_age)
+	(_, _, best_age_one) = last(historico_age_one)
+	df = DataFrame("Algoritmo"=>String[], "Mejor Fitness"=>Float64[], "Tiempo" =>Float64[])
+	push!(df, ("Generacional", best_agg, time_agg))
+	push!(df, ("Estacionario", best_age, time_age))
+	# push!(df, ("Estacionario One", best_age_one, time_age_one))
+	df
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -615,6 +1040,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [compat]
 DataFrames = "~1.5.0"
 Distances = "~0.10.8"
+Distributions = "~0.25.87"
 Plots = "~1.38.9"
 PlutoTeachingTools = "~0.2.9"
 PlutoUI = "~0.7.50"
@@ -627,7 +1053,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.0"
 manifest_format = "2.0"
-project_hash = "1a45cbb623abfb2161baa58b0c22db6a9351bf1c"
+project_hash = "dfe6f920499a366bcc1181ddc4497ad518f807b1"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -661,6 +1087,12 @@ deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jl
 git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.1+1"
+
+[[deps.Calculus]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
+uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
+version = "0.5.1"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
@@ -761,6 +1193,12 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 deps = ["Mmap"]
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
+[[deps.DensityInterface]]
+deps = ["InverseFunctions", "Test"]
+git-tree-sha1 = "80c3e8639e3353e5d2912fb3a1916b8455e2494b"
+uuid = "b429d917-457f-4dbc-8f4c-0cc954292b1d"
+version = "0.4.0"
+
 [[deps.Distances]]
 deps = ["LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI"]
 git-tree-sha1 = "49eba9ad9f7ead780bfb7ee319f962c811c6d3b2"
@@ -770,6 +1208,12 @@ version = "0.10.8"
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+
+[[deps.Distributions]]
+deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
+git-tree-sha1 = "13027f188d26206b9e7b863036f87d2f2e7d013a"
+uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
+version = "0.25.87"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -781,6 +1225,12 @@ version = "0.9.3"
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.6.0"
+
+[[deps.DualNumbers]]
+deps = ["Calculus", "NaNMath", "SpecialFunctions"]
+git-tree-sha1 = "5837a837389fccf076445fce071c8ddaea35a566"
+uuid = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+version = "0.6.8"
 
 [[deps.Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -802,6 +1252,12 @@ version = "4.4.2+2"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+
+[[deps.FillArrays]]
+deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
+git-tree-sha1 = "fc86b4fd3eff76c3ce4f5e96e2fdfa6282722885"
+uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
+version = "1.0.0"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -889,6 +1345,12 @@ deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll",
 git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
+
+[[deps.HypergeometricFunctions]]
+deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
+git-tree-sha1 = "432b5b03176f8182bd6841fbfc42c718506a2d5f"
+uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
+version = "0.3.15"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -1202,6 +1664,12 @@ deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 version = "10.40.0+0"
 
+[[deps.PDMats]]
+deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
+git-tree-sha1 = "67eae2738d63117a196f497d7db789821bce61d1"
+uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
+version = "0.11.17"
+
 [[deps.Parsers]]
 deps = ["Dates", "SnoopPrecompile"]
 git-tree-sha1 = "478ac6c952fddd4399e71d4779797c538d0ff2bf"
@@ -1294,6 +1762,12 @@ git-tree-sha1 = "0c03844e2231e12fda4d0086fd7cbe4098ee8dc5"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
 version = "5.15.3+2"
 
+[[deps.QuadGK]]
+deps = ["DataStructures", "LinearAlgebra"]
+git-tree-sha1 = "6ec7ac8412e83d57e313393220879ede1740f9ee"
+uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+version = "2.8.2"
+
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
@@ -1336,6 +1810,18 @@ deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibG
 git-tree-sha1 = "feafdc70b2e6684314e188d95fe66d116de834a7"
 uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
 version = "3.5.2"
+
+[[deps.Rmath]]
+deps = ["Random", "Rmath_jll"]
+git-tree-sha1 = "f65dcb5fa46aee0cf9ed6274ccbd597adc49aa7b"
+uuid = "79098fc4-a85e-5d69-aa6a-4863f24498fa"
+version = "0.7.1"
+
+[[deps.Rmath_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "6ed52fdd3382cf21947b15e8870ac0ddbff736da"
+uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
+version = "0.4.0+0"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -1408,10 +1894,20 @@ git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.21"
 
+[[deps.StatsFuns]]
+deps = ["ChainRulesCore", "HypergeometricFunctions", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
+git-tree-sha1 = "f625d686d5a88bcd2b15cd81f18f98186fdc0c9a"
+uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
+version = "1.3.0"
+
 [[deps.StringManipulation]]
 git-tree-sha1 = "46da2434b41f41ac3594ee9816ce5541c6096123"
 uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
 version = "0.3.0"
+
+[[deps.SuiteSparse]]
+deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
+uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -1718,18 +2214,34 @@ version = "1.4.1+0"
 # ╟─ba86256b-134b-4309-88ad-4bf9296c7d42
 # ╟─903c9853-acdc-4495-855d-3d4ce2242bf3
 # ╟─85e41585-b696-42e7-80d5-0c980a30a536
-# ╠═929dbc59-8d47-438c-aa6b-a797cf8cdb73
+# ╟─929dbc59-8d47-438c-aa6b-a797cf8cdb73
 # ╟─04437555-ddb3-49b6-98cc-cf5687af4c08
-# ╠═08bec682-efa6-4bc0-b739-0ddd02f8f0d8
+# ╟─08bec682-efa6-4bc0-b739-0ddd02f8f0d8
 # ╠═12a0eb6e-080b-442f-aa7b-67be6a13c2d2
-# ╠═ed4e4ad3-20d0-47cb-aaf6-d18bdd3eb5d7
+# ╟─6f75ee5e-8b40-42ae-b59f-fc17a2c16800
+# ╠═73dc306d-3904-4c35-899c-05823e2380f2
+# ╟─e07d5db1-fedb-4883-9e7b-42bbeb1196c4
+# ╟─e8ccadcf-ae4d-4014-a3bc-0d08b1c7fb58
+# ╟─441219bc-c438-4159-ad1e-8441cdd850e9
+# ╟─4e1cf32a-9387-4b6b-b324-d5ecb14e614d
+# ╟─abb709a1-7344-4e84-a24f-443caed0fc00
+# ╠═bce56ce3-fb2e-4d64-bb2b-97f85a00aa94
+# ╟─05934fbf-e9a3-41e4-a333-18be8eda1275
+# ╟─1ca679ff-faf5-4194-9da3-3f8811bb3049
+# ╟─16a2aa78-c2d0-4fbc-88e4-fb45032aa14e
+# ╟─3be68ad7-75a1-4a4d-a234-2bd24418b963
+# ╟─ddb0cea0-dfd7-40a7-a6c3-8dbb68c042d3
+# ╟─e5846c20-63aa-4972-9d00-5839ce9f2128
+# ╟─2af35bfb-b24f-4210-a0a1-af4879ced7f9
+# ╟─f512edb8-95ec-485d-9037-81c1062933c1
 # ╟─482a3d43-77b0-4f1a-b2ad-c9ded08f0226
 # ╟─bffa1ef7-b779-46ae-9306-3364aaf0e729
+# ╟─7d4b2a03-b544-4e7b-a096-a2f97dcaddfa
 # ╠═d098ac9b-526e-47a6-963f-a61b5265e886
 # ╟─acfbad57-b07e-48b4-bb92-ef35350240b7
 # ╠═a647901b-50e1-4430-a85c-2b50c8eae0ff
-# ╟─76bad016-e20e-4491-b7e2-c47b7eec0a20
-# ╟─ac6d750a-658d-4357-b912-4569c61e23ac
+# ╠═76bad016-e20e-4491-b7e2-c47b7eec0a20
+# ╠═ac6d750a-658d-4357-b912-4569c61e23ac
 # ╟─f890be4d-60db-4424-99ab-0286ef9b47dd
 # ╠═307784a8-a5f1-4d1c-b228-6c76d26bd863
 # ╟─cb7e1e27-f497-47cb-9fac-1f96c19c99f3
@@ -1737,7 +2249,7 @@ version = "1.4.1+0"
 # ╟─170b110d-d1f2-4d3c-a1f7-cf7ac6075a69
 # ╠═40df03c1-78d5-4720-a00a-c0ed749fdc85
 # ╟─5be982d9-0e21-44e7-91e9-34d9ae6b1a2b
-# ╟─c940c590-18a4-4885-9cc0-54f5b11d64b9
+# ╠═c940c590-18a4-4885-9cc0-54f5b11d64b9
 # ╟─f8992c2b-62f5-4a9b-8801-3fb99a8dfc3d
 # ╠═dbe29c8e-0c89-42f3-9e98-c1ea854b1bfc
 # ╟─eacab210-b42e-4606-9e86-a6b882cdba6e
@@ -1750,5 +2262,13 @@ version = "1.4.1+0"
 # ╠═de419343-3685-445b-a3de-b94f46008c60
 # ╠═ddaac93b-0c84-4675-9b29-bab93014283d
 # ╠═4afbe858-3f79-4061-94f5-657e8e36172a
+# ╠═a5f2720c-edfb-414a-9bb1-6957b8c6fa81
+# ╠═5f487255-3171-4b50-9e38-fe4146c4115a
+# ╠═e2b71cc7-e505-4ea1-84dd-6109ec49204c
+# ╠═a4e30c13-e7a6-406e-b8d2-16758231b7ff
+# ╟─4e9cd677-60f5-4d0b-b882-7c7666f8d5ff
+# ╟─a8657d4f-867b-43b3-8e78-8be73f1ff8ea
+# ╟─e4c005e3-d1bd-47e3-9f66-105931a45f34
+# ╟─721acdea-79c6-4409-9e52-06f66ebf67d7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
