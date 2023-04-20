@@ -236,18 +236,18 @@ end
 
 # ╔═╡ abb709a1-7344-4e84-a24f-443caed0fc00
 md"""
-Evaluaciones AGG: $(@bind global_evals_agg Slider(50:50:ag_number_evals, show_value=true))
+Evaluaciones AGG: $(@bind global_evals_agg Slider(50:50:ag_number_evals))
 """
 
 # ╔═╡ 1ca679ff-faf5-4194-9da3-3f8811bb3049
 md"""
-Evaluaciones AGE: $(@bind global_evals_age Slider(50:50:ag_number_evals, show_value=true))
+Evaluaciones AGE: $(@bind global_evals_age Slider(50:50:ag_number_evals))
 """
 
 # ╔═╡ ddb0cea0-dfd7-40a7-a6c3-8dbb68c042d3
 if isempty(online)
 md"""
-Evaluaciones AGG y AGE: $(@bind global_evals_ag Slider(50:50:ag_number_evals, show_value=true))
+Evaluaciones AGG y AGE: $(@bind global_evals_ag Slider(50:50:ag_number_evals))
 """
 end
 
@@ -2225,7 +2225,7 @@ version = "1.4.1+0"
 # ╟─441219bc-c438-4159-ad1e-8441cdd850e9
 # ╟─4e1cf32a-9387-4b6b-b324-d5ecb14e614d
 # ╟─abb709a1-7344-4e84-a24f-443caed0fc00
-# ╠═bce56ce3-fb2e-4d64-bb2b-97f85a00aa94
+# ╟─bce56ce3-fb2e-4d64-bb2b-97f85a00aa94
 # ╟─05934fbf-e9a3-41e4-a333-18be8eda1275
 # ╟─1ca679ff-faf5-4194-9da3-3f8811bb3049
 # ╟─16a2aa78-c2d0-4fbc-88e4-fb45032aa14e
@@ -2264,8 +2264,8 @@ version = "1.4.1+0"
 # ╠═4afbe858-3f79-4061-94f5-657e8e36172a
 # ╠═a5f2720c-edfb-414a-9bb1-6957b8c6fa81
 # ╠═5f487255-3171-4b50-9e38-fe4146c4115a
-# ╠═e2b71cc7-e505-4ea1-84dd-6109ec49204c
-# ╠═a4e30c13-e7a6-406e-b8d2-16758231b7ff
+# ╟─e2b71cc7-e505-4ea1-84dd-6109ec49204c
+# ╟─a4e30c13-e7a6-406e-b8d2-16758231b7ff
 # ╟─4e9cd677-60f5-4d0b-b882-7c7666f8d5ff
 # ╟─a8657d4f-867b-43b3-8e78-8be73f1ff8ea
 # ╟─e4c005e3-d1bd-47e3-9f66-105931a45f34
