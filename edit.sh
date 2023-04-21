@@ -1,2 +1,2 @@
 #!/bin/env sh
-julia --project=. -e 'using Pluto; Pluto.run()'
+julia --project=. -e 'using Pkg; Pkg.instantiate(); using Pluto; Pluto.run()'
