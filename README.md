@@ -2,6 +2,10 @@
 
 Proyecto de Innovación Docente para faciltar el aprendizaje de Metaheurísticas.
 
+Nota: este repositorio es un mirror de mi propio repositorio en
+[fossil](https://fossil-scm.org/), por favor, no hacer pull request, es mejor
+usar Issues, o contactarme a dmolinac at ugr.es.
+
 Este documento forma parte del **Proyecto de Innovación Docente Desarrollo de herramientas web interactivas para el aprendizaje de Metaheurísticas** asociado a la asignatura de Metaheurísticas que se imparte para el _Grado en Ingeniería Informática_ (aunque abierta a grados dobles) en la **Universidad de Granada (UGR)**.
 
 En este sistema interactivo se mostrará cómo se puede aplicar un problema concreto, el _Viajante de Comercio_ para resolverlo con distintas metaheurísticas, algo semejante a lo que tienen que hacer los y las estudiantes de la asignatura, pero con problemas distintos. Al igual que las prácticas de la asignatura, este entorno web está dividido en tres partes, cada una de ellas abordando distintas metaheurísticas sobre el mismo problema.
