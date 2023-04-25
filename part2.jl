@@ -217,7 +217,7 @@ md"""
 # ╔═╡ e8ccadcf-ae4d-4014-a3bc-0d08b1c7fb58
 begin
 md"""
-Vamos a aplicarlo. El Tiempo Real indica que conforme se actualice el control deslizante se ejecuta. Si no se marca se evalúan hasta el máximo de evaluaciones y luego. Es recomendable solo usar el Modo en Tiempo Real en problemas pequeños.
+Vamos a aplicarlo. El Tiempo Real indica que conforme se actualice el control deslizante se ejecuta. Si no se marca se evalúan hasta el máximo de evaluaciones y luego el Slider muestra el resultado ya calculado. Es recomendable solo usar el Modo en Tiempo Real en problemas pequeños.
 
 $(@bind ag_number_evals confirm(NumberField(1000:1000:50_000, default=1000)))
 $(@bind online MultiCheckBox([\"Modo Tiempo Real\"]))
@@ -246,6 +246,11 @@ md"""
 Evaluaciones AGE: $(@bind global_evals_age Slider(50:50:ag_number_evals))
 """
 
+# ╔═╡ ed8402c9-9f92-4249-a987-65248068971f
+md"""
+Ahora vamos a mostrar con un único slider, para un mismo número de evaluaciones cómo cambia la mejor solución tanto para el AG Generacional como para el AG Estacionario.
+"""
+
 # ╔═╡ ddb0cea0-dfd7-40a7-a6c3-8dbb68c042d3
 if isempty(online)
 md"""
@@ -255,7 +260,7 @@ end
 
 # ╔═╡ 2af35bfb-b24f-4210-a0a1-af4879ced7f9
 md"""
-# AG Generacional Vs AG Estacionario
+## Resultados en Tabla
 
 Vamos a comparar los resultados de ambos para el problema **$(basename(fname))** con **$(ag_number_evals)** evaluaciones.
 """
@@ -292,7 +297,7 @@ end
 
 # ╔═╡ acfbad57-b07e-48b4-bb92-ef35350240b7
 md"""
-Vamos a ver varios ejemplos:
+Vamos a generar soluciones de tamaño 10:
 """
 
 # ╔═╡ a647901b-50e1-4430-a85c-2b50c8eae0ff
@@ -353,7 +358,7 @@ begin
 		plt
 	end
 	md"""
-Vamos a visualizar soluciones aleatorias $(@bind boton_new Button(\"Nueva Aleatoria\"))
+Vamos a visualizar soluciones aleatorias para el problema elegido: $(@bind boton_new Button(\"Nueva Aleatoria\"))
 """
 end
 
@@ -395,7 +400,7 @@ function mutation(solution; verbose=false)
 end
 
 # ╔═╡ 170b110d-d1f2-4d3c-a1f7-cf7ac6075a69
-md"Vamos a mostrar un ejemplo $(@bind boton_muta Button(\"Muta aleatorio\"))"
+md"Vamos a mostrar un ejemplo para dimensión 10 $(@bind boton_muta Button(\"Muta aleatorio\"))"
 
 # ╔═╡ 40df03c1-78d5-4720-a00a-c0ed749fdc85
 begin
@@ -1048,6 +1053,7 @@ end
 # ╟─1ca679ff-faf5-4194-9da3-3f8811bb3049
 # ╟─16a2aa78-c2d0-4fbc-88e4-fb45032aa14e
 # ╟─3be68ad7-75a1-4a4d-a234-2bd24418b963
+# ╟─ed8402c9-9f92-4249-a987-65248068971f
 # ╟─ddb0cea0-dfd7-40a7-a6c3-8dbb68c042d3
 # ╟─e5846c20-63aa-4972-9d00-5839ce9f2128
 # ╟─2af35bfb-b24f-4210-a0a1-af4879ced7f9
