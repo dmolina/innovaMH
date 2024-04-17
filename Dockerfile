@@ -1,4 +1,4 @@
-FROM docker.io/library/julia:1.8.5-bullseye
+FROM docker.io/library/julia:1.10-alpine
 WORKDIR /app
 COPY . /app
 RUN rm -f /app/Manifest.toml
